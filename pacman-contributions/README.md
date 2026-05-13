@@ -1,122 +1,102 @@
 # PAC-CONTRIBUTIONS
 
-PAC-CONTRIBUTIONS is a production-ready Next.js 14 backend for a public GitHub contribution visualizer. It fetches real GitHub contribution data, normalizes it into a fixed 53 x 7 grid, caches responses, and exposes a frontend-safe API for the Pac-Man animation layer.
+PAC-CONTRIBUTIONS turns a GitHub contribution graph into an animated Pac-Man experience. It combines a Next.js frontend, a production-ready contribution ingestion API, caching, normalization, and a GitHub Actions workflow path for profile README automation.
+
+![License](https://img.shields.io/github/license/skp8500/PAC-CONTRIBUTIONS)
+![Stars](https://img.shields.io/github/stars/skp8500/PAC-CONTRIBUTIONS)
+![Next.js](https://img.shields.io/badge/Next.js-14-black)
+![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000)
+
+## Preview / Demo
+
+Live demo:
+
+- [pac-contributions.vercel.app](https://pac-contributions.vercel.app/)
+
+Suggested visual section for the repository root:
+
+```md
+![Preview](assets/demo.gif)
+```
+
+You can also use screenshots from the live app UI to showcase:
+
+- animated Pac-Man movement
+- ghost-eating contribution cells
+- README embed workflow
 
 ## Features
 
-- Public GitHub contribution graph ingestion via SVG
-- GraphQL fallback with optional `GITHUB_TOKEN`
-- Fixed-size 371-cell normalized output
-- In-memory caching with TTL and optional Upstash Redis support
-- Vercel-ready Node.js API route
-- Username validation, error handling, and safe server-side token usage
+- Animated Pac-Man contribution graph based on real GitHub data
+- Public GitHub contributions ingestion with GraphQL fallback
+- Dark and light mode support
+- Fixed 53 x 7 normalized contribution grid
+- Frontend-ready JSON API for external consumers
+- Vercel-ready Next.js 14 deployment
+- In-memory cache with optional Upstash Redis support
+- GitHub profile README workflow support
+- Daily automation support through GitHub Actions
+- Custom pixel-art Pac-Man animation and ghost-eat effects
 
-## Architecture Overview
+## Installation
 
-The backend is organized around a simple ingestion pipeline:
+1. Clone the repository.
 
-1. `GET /api/contributions/[username]` validates input and checks the cache.
-2. The server tries GitHub's public SVG endpoint first.
-3. If SVG fetching or parsing fails, it falls back to GitHub GraphQL when `GITHUB_TOKEN` is configured.
-4. Contribution cells are normalized into exactly 371 entries.
-5. The payload is cached and returned to the frontend.
-
-Core modules:
-
-- `app/api/contributions/[username]/route.js`: main API handler
-- `lib/cache.js`: in-memory cache with optional Upstash support
-- `lib/fetchPublicSVG.js`: public GitHub SVG ingestion
-- `lib/fetchGraphQL.js`: authenticated GitHub GraphQL fallback
-- `lib/parseContributions.js`: sorting, padding, trimming, and level normalization
-- `lib/validators.js`: username validation
-- `lib/logger.js`: structured backend logging
-
-## Project Structure
-
-```text
-pacman-contributions/
-├── app/
-│   ├── api/
-│   │   └── contributions/
-│   │       └── [username]/
-│   │           └── route.js
-│   ├── layout.jsx
-│   └── page.jsx
-├── lib/
-│   ├── cache.js
-│   ├── constants.js
-│   ├── fetchGraphQL.js
-│   ├── fetchPublicSVG.js
-│   ├── logger.js
-│   ├── parseContributions.js
-│   └── validators.js
-├── .env.example
-├── .gitignore
-├── package.json
-├── README.md
-└── vercel.json
+```bash
+git clone https://github.com/skp8500/PAC-CONTRIBUTIONS.git
+cd PAC-CONTRIBUTIONS/pacman-contributions
 ```
 
-`app/layout.jsx` is included because Next.js App Router requires a root layout to build successfully.
-
-## Setup
-
-### Prerequisites
-
-- Node.js 18.17 or newer
-- npm 9 or newer
-
-### Install
+2. Install dependencies.
 
 ```bash
 npm install
 ```
 
-### Environment Variables
-
-Create a local environment file from `.env.example`:
+3. Create a local environment file.
 
 ```bash
 cp .env.example .env.local
 ```
 
-Supported variables:
+4. Add your optional environment variables.
 
-- `GITHUB_TOKEN`: optional GitHub token for GraphQL fallback
-- `UPSTASH_REDIS_REST_URL`: optional Upstash REST URL for distributed caching
-- `UPSTASH_REDIS_REST_TOKEN`: optional Upstash REST token for distributed caching
+```env
+GITHUB_TOKEN=ghp_your_token_here
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
 
-Only `GITHUB_TOKEN` is required for GraphQL fallback. The public SVG path works without authentication.
-
-## Local Development
-
-Start the development server:
+5. Start the development server.
 
 ```bash
 npm run dev
 ```
 
-Open the API directly:
+6. Open the app in your browser.
 
-```bash
-http://localhost:3000/api/contributions/torvalds
+```text
+http://localhost:3000
 ```
 
-## API
+## Usage
 
-### Endpoint
+Enter any public GitHub username in the UI and generate a live Pac-Man visualization of that user’s contribution graph.
 
-```http
-GET /api/contributions/[username]
-```
+The app will:
 
-Example:
+- fetch contribution data from GitHub
+- normalize it into a 371-cell grid
+- animate Pac-Man across the board
+- expose the same data through the backend API
+
+Example API request:
 
 ```http
 GET /api/contributions/torvalds
 ```
 
-### Success Response
+Example response:
 
 ```json
 {
@@ -135,66 +115,143 @@ GET /api/contributions/torvalds
 }
 ```
 
-### Response Notes
+## Configuration
 
-- `contributions` always contains exactly `371` cells.
-- `source` is either `svg` or `graphql`.
-- `cached` indicates whether the response body came from cache.
-- `generatedAt` is the server-side generation timestamp of the cached payload.
+Environment variables:
 
-### Error Responses
+- `GITHUB_TOKEN`
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
 
-- `400`: invalid username
-- `404`: GitHub user not found
-- `429`: rate limited by upstream source
-- `500`: contribution data could not be fetched
+Notes:
 
-Every error response is JSON and the API never intentionally crashes the request.
+- `GITHUB_TOKEN` enables GitHub GraphQL fallback when the public contribution page is unavailable or changes format.
+- Upstash variables are optional and only needed if you want shared cache across serverless instances.
+- The API always returns exactly `371` contribution cells.
 
-## Cache Explanation
+Vercel settings:
 
-The backend uses a two-tier strategy:
+- Root Directory: `pacman-contributions`
+- Framework Preset: `Next.js`
+- Output Directory: leave empty
 
-1. An in-memory cache stores payloads for one hour.
-2. If Upstash REST credentials are configured, the same payload is also stored in Redis for cross-instance reuse on Vercel.
+## Tech Stack
 
-Cache behavior:
+- Next.js 14
+- JavaScript
+- React
+- Node.js runtime
+- Cheerio
+- GitHub public contribution markup
+- GitHub GraphQL API
+- Vercel
+- GitHub Actions
 
-- TTL: 1 hour
-- Request cache header: `Cache-Control: public, max-age=3600`
-- Cache hit header: `X-Cache: HIT`
-- Cache miss header: `X-Cache: MISS`
+## Project Structure
 
-This reduces repeated upstream requests and helps avoid GitHub abuse limits.
+```text
+pacman-contributions/
+├── app/
+│   ├── api/
+│   │   └── contributions/
+│   │       └── [username]/
+│   │           └── route.js
+│   ├── globals.css
+│   ├── icon.svg
+│   ├── layout.jsx
+│   └── page.jsx
+├── lib/
+│   ├── cache.js
+│   ├── constants.js
+│   ├── fetchGraphQL.js
+│   ├── fetchPublicSVG.js
+│   ├── logger.js
+│   ├── parseContributions.js
+│   └── validators.js
+├── .env.example
+├── package.json
+├── README.md
+└── vercel.json
+```
+
+## GitHub README Automation
+
+If you want to use this project for a GitHub profile README animation workflow, create this file in your profile repository:
+
+```text
+.github/workflows/pacman.yml
+```
+
+Use this workflow:
+
+```yaml
+name: Generate Pac-Man
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  generate:
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: skp8500/PAC-CONTRIBUTIONS@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Then enable:
+
+```text
+Repository → Settings → Actions → General → Read and write permissions
+```
 
 ## Deployment
 
-### Vercel Steps
+Deploy on Vercel:
 
-1. Push the repository to GitHub.
-2. Import the project into Vercel.
-3. Set the Root Directory to `pacman-contributions` if deploying from the parent repository.
-4. Add environment variables in the Vercel dashboard:
-   - `GITHUB_TOKEN` for GraphQL fallback
-   - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` if using shared cache
-5. Deploy.
+1. Push your code to GitHub.
+2. Import the repository into Vercel.
+3. Set the Root Directory to `pacman-contributions`.
+4. Confirm the Framework Preset is `Next.js`.
+5. Leave Output Directory empty.
+6. Add environment variables.
+7. Deploy.
 
-### Why It Works on Vercel
+After deployment, test both:
 
-- Uses Next.js 14 App Router
-- Forces `nodejs` runtime for Cheerio compatibility
-- Keeps tokens server-side only
-- Uses native `fetch` and Vercel-compatible REST calls
+```text
+/
+/api/contributions/skp8500
+```
 
-## Security
+## Contributing
 
-- GitHub tokens never leave the server
-- User input is validated before any upstream request
-- Invalid usernames are rejected immediately
-- Responses are sanitized to contain only normalized public contribution data
+Pull requests are welcome.
 
-## Maintenance Notes
+For major changes, please open an issue first to discuss what you would like to change.
 
-- SVG is the primary source because it works for public users without authentication.
-- GraphQL is a fallback path when SVG is unavailable and a token is configured.
-- The normalizer guarantees a frontend-safe fixed-size grid, even when GitHub returns too few or too many cells.
+When contributing:
+
+- keep the API response shape stable
+- preserve the fixed 371-cell normalization rule
+- avoid exposing secrets to the client
+- test both the UI and the API route
+
+## License
+
+MIT License
+
+## References
+
+- [GitHub README Guide](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)
+- [Awesome README Examples](https://github.com/matiassingers/awesome-readme)
+- [Shields.io Badges](https://shields.io/)
