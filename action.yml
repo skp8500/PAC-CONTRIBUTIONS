@@ -1,21 +1,24 @@
 name: 'Pac-Man Contributions'
 description: 'Generate animated Pac-Man contributions graph SVG (dark + light)'
 author: 'skp8500'
+
 branding:
   icon: 'zap'
   color: 'yellow'
 
 inputs:
   github_token:
-    description: 'GitHub token with read:user scope'
+    description: 'GitHub token'
     required: true
+
   github_username:
-    description: 'Target GitHub username (defaults to the repo owner running the workflow)'
+    description: 'Target GitHub username'
     required: false
     default: ''
 
 runs:
   using: composite
+
   steps:
     - uses: actions/setup-node@v4
       with:
@@ -27,3 +30,28 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         GITHUB_USERNAME: ${{ inputs.github_username != '' && inputs.github_username || github.repository_owner }}
+
+    - name: Push to output branch
+      shell: bash
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        git fetch origin
+
+        git switch output || git switch --orphan output
+
+        find . -mindepth 1 -maxdepth 1 \
+          ! -name '.git' \
+          ! -name 'dist' \
+          -exec rm -rf {} +
+
+        cp -r dist/* .
+
+        touch .nojekyll
+
+        git add .
+
+        git commit -m "Generate Pac-Man contribution graph" || echo "No changes"
+
+        git push origin output --force
