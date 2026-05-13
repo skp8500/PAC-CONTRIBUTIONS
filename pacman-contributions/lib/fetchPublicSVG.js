@@ -32,10 +32,10 @@ export async function fetchPublicSVG(username) {
     }
 
     const svgMarkup = await response.text();
-    const $ = cheerio.load(svgMarkup, { xmlMode: true });
+    const $ = cheerio.load(svgMarkup);
     const cells = [];
 
-    $("rect.ContributionCalendar-day").each((_, element) => {
+    $(".ContributionCalendar-day").each((_, element) => {
       const date = $(element).attr("data-date");
       const rawLevel = Number.parseInt($(element).attr("data-level") ?? "", 10);
 
