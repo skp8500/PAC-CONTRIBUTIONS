@@ -262,6 +262,7 @@ export default function HomePage() {
   const pacCellRef = useRef({ col: 0, row: 0 });
   const segmentRef = useRef([]);
   const segmentIndexRef = useRef(0);
+  const segmentProgressRef = useRef(0);
   const remainingCellsRef = useRef(null);
   const historyRef = useRef([]);
   const totalTargetsRef = useRef(0);
@@ -296,12 +297,14 @@ export default function HomePage() {
     if (!target) return null;
     currentTargetRef.current = target;
 
+    const startNode = { x: cellCX(fromCol), y: cellCY(fromRow), col: fromCol, row: fromRow, dir: pacDirRef.current };
+
     if (target.col === fromCol && target.row === fromRow) {
-      return [{ x: cellCX(fromCol), y: cellCY(fromRow), col: fromCol, row: fromRow, dir: pacDirRef.current }];
+      return [startNode];
     }
 
     const nodes = aStar(fromCol, fromRow, target.col, target.row);
-    return nodes.length > 0 ? toPixelPath(nodes) : null;
+    return nodes.length > 0 ? [startNode, ...toPixelPath(nodes)] : null;
   }
 
   function resetAnimation() {
@@ -314,6 +317,7 @@ export default function HomePage() {
     pacCellRef.current = { col: 0, row: 0 };
     segmentRef.current = [];
     segmentIndexRef.current = 0;
+    segmentProgressRef.current = 0;
     historyRef.current = [];
     remainingCellsRef.current = getTargetCells(contributions);
     totalTargetsRef.current = remainingCellsRef.current.size;
@@ -362,7 +366,7 @@ export default function HomePage() {
       const deltaSeconds = Math.min((timestamp - lastTimestampRef.current) / 1000, 0.05);
       lastTimestampRef.current = timestamp;
 
-      if (segmentRef.current.length === 0 || segmentIndexRef.current >= segmentRef.current.length) {
+      if (segmentRef.current.length === 0) {
         const { col, row } = pacCellRef.current;
         const nextSegment = buildPathToTarget(col, row);
 
@@ -373,42 +377,57 @@ export default function HomePage() {
 
         segmentRef.current = nextSegment;
         segmentIndexRef.current = 0;
+        segmentProgressRef.current = 0;
       }
 
-      let distance = SPEED * deltaSeconds;
-      let nextIndex = segmentIndexRef.current;
-      const currentSegment = segmentRef.current;
+      const seg = segmentRef.current;
+      let idx = segmentIndexRef.current;
+      let progress = segmentProgressRef.current;
+      let totalDist = SPEED * deltaSeconds;
 
-      while (distance > 0 && nextIndex < currentSegment.length - 1) {
-        const pointA = currentSegment[nextIndex];
-        const pointB = currentSegment[nextIndex + 1];
-        const stepDistance = Math.hypot(pointB.x - pointA.x, pointB.y - pointA.y);
+      while (totalDist > 0 && idx < seg.length - 1) {
+        const A = seg[idx];
+        const B = seg[idx + 1];
+        const stepDist = Math.hypot(B.x - A.x, B.y - A.y);
 
-        if (stepDistance === 0) {
-          nextIndex += 1;
+        if (stepDist === 0) {
+          idx += 1;
           continue;
         }
 
-        if (stepDistance <= distance) {
-          distance -= stepDistance;
-          nextIndex += 1;
+        const leftInStep = stepDist * (1 - progress);
+
+        if (totalDist >= leftInStep) {
+          totalDist -= leftInStep;
+          idx += 1;
+          progress = 0;
         } else {
-          break;
+          progress += totalDist / stepDist;
+          totalDist = 0;
         }
       }
 
-      segmentIndexRef.current = Math.min(nextIndex, currentSegment.length - 1);
-      const currentPoint = currentSegment[segmentIndexRef.current];
+      segmentIndexRef.current = idx;
+      segmentProgressRef.current = progress;
 
-      if (!currentPoint) {
-        frameRef.current = requestAnimationFrame(animate);
-        return;
+      let visualX, visualY;
+      let currentDir = seg[idx].dir;
+
+      if (idx < seg.length - 1) {
+        const A = seg[idx];
+        const B = seg[idx + 1];
+        visualX = A.x + (B.x - A.x) * progress;
+        visualY = A.y + (B.y - A.y) * progress;
+        currentDir = seg[idx + 1].dir;
+      } else {
+        visualX = seg[idx].x;
+        visualY = seg[idx].y;
       }
 
-      pacCellRef.current = { col: currentPoint.col, row: currentPoint.row };
+      pacCellRef.current = { col: seg[idx].col, row: seg[idx].row };
 
-      const currentCellKey = cellKey(currentPoint.col, currentPoint.row);
-      const contribution = getContributionAt(contributions, currentPoint.col, currentPoint.row);
+      const currentCellKey = cellKey(seg[idx].col, seg[idx].row);
+      const contribution = getContributionAt(contributions, seg[idx].col, seg[idx].row);
 
       if (contribution.level > 0 && !eatenRef.current[currentCellKey]) {
         eatenRef.current = { ...eatenRef.current, [currentCellKey]: true };
@@ -420,8 +439,8 @@ export default function HomePage() {
         setRemaining(remainingCellsRef.current.size);
       }
 
-      if (segmentIndexRef.current >= currentSegment.length - 1) {
-        const nextSegment = buildPathToTarget(currentPoint.col, currentPoint.row);
+      if (idx >= seg.length - 1) {
+        const nextSegment = buildPathToTarget(seg[idx].col, seg[idx].row);
 
         if (!nextSegment) {
           setGameOver(true);
@@ -430,6 +449,7 @@ export default function HomePage() {
 
         segmentRef.current = nextSegment;
         segmentIndexRef.current = 0;
+        segmentProgressRef.current = 0;
       }
 
       mouthRef.current += mouthDirectionRef.current * deltaSeconds * 420;
@@ -445,11 +465,11 @@ export default function HomePage() {
       }
 
       setMouth(mouthRef.current);
-      setPacPos({ x: currentPoint.x, y: currentPoint.y });
-      setPacDir(currentPoint.dir);
-      pacDirRef.current = currentPoint.dir;
+      setPacPos({ x: visualX, y: visualY });
+      setPacDir(currentDir);
+      pacDirRef.current = currentDir;
 
-      historyRef.current.push({ x: currentPoint.x, y: currentPoint.y, timestamp });
+      historyRef.current.push({ x: visualX, y: visualY, timestamp });
 
       if (historyRef.current.length > 200) {
         historyRef.current.shift();
