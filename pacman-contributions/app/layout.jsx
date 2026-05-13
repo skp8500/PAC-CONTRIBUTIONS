@@ -1,3 +1,5 @@
+import "./globals.css";
+
 export const metadata = {
   title: "PAC-CONTRIBUTIONS Backend",
   description: "Backend infrastructure for GitHub contribution ingestion.",
