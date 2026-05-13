@@ -12,7 +12,7 @@ const PAD_L = 38;
 const PAD_T = 32;
 const SVG_W = PAD_L + COLS * STEP + 20;
 const SVG_H = PAD_T + ROWS * STEP + 16;
-const SPEED_PRESETS = { slow: 80, normal: 160, fast: 320, turbo: 600 };
+const SPEED_PRESETS = { quarter: 40, half: 80, threequarter: 120, full: 160 };
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -226,7 +226,7 @@ export default function HomePage() {
   const [score, setScore] = useState(0);
   const [remaining, setRemaining] = useState(COLS * ROWS);
   const [trail, setTrail] = useState([]);
-  const [gameSpeed, setGameSpeed] = useState("normal");
+  const [gameSpeed, setGameSpeed] = useState("half");
 
   const eatenRef = useRef({});
   const scoreRef = useRef(0);
@@ -243,7 +243,7 @@ export default function HomePage() {
   const totalTargetsRef = useRef(0);
   const currentTargetRef = useRef(null);
   const pacDirRef = useRef("right");
-  const speedRef = useRef(SPEED_PRESETS.normal);
+  const speedRef = useRef(SPEED_PRESETS.half);
   const animateRef = useRef(null);
 
   function pickNearestTarget(fromCol, fromRow) {
@@ -333,7 +333,7 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    speedRef.current = SPEED_PRESETS[gameSpeed] ?? SPEED_PRESETS.normal;
+    speedRef.current = SPEED_PRESETS[gameSpeed] ?? SPEED_PRESETS.half;
   }, [gameSpeed]);
 
   useEffect(() => {
@@ -668,10 +668,10 @@ export default function HomePage() {
             <span style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: textColor, whiteSpace: "nowrap" }}>PAC SPEED:</span>
             <div style={{ display: "flex", border: `1px solid ${borderColor}`, borderRadius: 3, overflow: "hidden" }}>
               {[
-                { key: "slow", label: "0.5×" },
-                { key: "normal", label: "1×" },
-                { key: "fast", label: "2×" },
-                { key: "turbo", label: "4×" },
+                { key: "quarter", label: "0.25×" },
+                { key: "half", label: "0.5×" },
+                { key: "threequarter", label: "0.75×" },
+                { key: "full", label: "1×" },
               ].map(({ key, label }) => (
                 <button
                   key={key}
