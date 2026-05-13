@@ -268,16 +268,31 @@ export default function HomePage() {
   const currentTargetRef = useRef(null);
   const pacDirRef = useRef("right");
 
-  function pickRandomTarget() {
+  function pickNearestTarget(fromCol, fromRow) {
     const remaining = [...remainingCellsRef.current];
     if (remaining.length === 0) return null;
-    const randomKey = remaining[Math.floor(Math.random() * remaining.length)];
-    const [col, row] = randomKey.split(",").map(Number);
-    return { col, row };
+
+    let nearestDist = Infinity;
+    const candidates = [];
+
+    for (const key of remaining) {
+      const [col, row] = key.split(",").map(Number);
+      const dist = Math.abs(col - fromCol) + Math.abs(row - fromRow);
+
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        candidates.length = 0;
+        candidates.push({ col, row });
+      } else if (dist === nearestDist) {
+        candidates.push({ col, row });
+      }
+    }
+
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
   function buildPathToTarget(fromCol, fromRow) {
-    const target = pickRandomTarget();
+    const target = pickNearestTarget(fromCol, fromRow);
     if (!target) return null;
     currentTargetRef.current = target;
 
