@@ -12,7 +12,7 @@ const PAD_L = 38;
 const PAD_T = 32;
 const SVG_W = PAD_L + COLS * STEP + 20;
 const SVG_H = PAD_T + ROWS * STEP + 16;
-const SPEED = 160;
+const SPEED_PRESETS = { slow: 80, normal: 160, fast: 320, turbo: 600 };
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -122,21 +122,49 @@ function getTargetCells(contributions) {
 }
 
 
-function Ghost({ x, y, color }) {
-  const size = 13;
+const GHOST_COLORS = { 1: "#6edff6", 2: "#FFB8FF", 3: "#FFB852", 4: "#FF0000" };
 
+function SmallGhost({ cx, cy, level }) {
+  const color = GHOST_COLORS[Math.min(Math.max(level, 1), 4)];
+  const s = 9;
+  const x = cx - s / 2;
+  const y = cy - s / 2;
+  return (
+    <g>
+      <path
+        d={`M${x+0.7},${y+s} L${x+0.7},${y+s*0.44}
+           Q${x+0.7},${y} ${cx},${y}
+           Q${x+s-0.7},${y} ${x+s-0.7},${y+s*0.44}
+           L${x+s-0.7},${y+s} L${x+s*0.82},${y+s*0.76}
+           L${x+s*0.64},${y+s} L${cx},${y+s*0.76}
+           L${x+s*0.36},${y+s} L${x+s*0.18},${y+s*0.76} Z`}
+        fill={color}
+        opacity={0.92}
+      />
+      <ellipse cx={cx - s * 0.18} cy={y + s * 0.37} rx="1.3" ry="1.4" fill="white" />
+      <ellipse cx={cx + s * 0.18} cy={y + s * 0.37} rx="1.3" ry="1.4" fill="white" />
+      <circle cx={cx - s * 0.12} cy={y + s * 0.42} r="0.6" fill="#111" />
+      <circle cx={cx + s * 0.24} cy={y + s * 0.42} r="0.6" fill="#111" />
+    </g>
+  );
+}
+
+function Ghost({ x, y, color }) {
+  const size = 14;
   return (
     <g transform={`translate(${x - size / 2}, ${y - size / 2})`}>
       <path
-        d={`M1,${size} L1,${size * 0.46} Q1,0 ${size / 2},0 Q${size - 1},0 ${size - 1},${size * 0.46}
-            L${size - 1},${size} L${size * 0.83},${size * 0.78} L${size * 0.67},${size}
-            L${size * 0.5},${size * 0.78} L${size * 0.33},${size} L${size * 0.17},${size * 0.78} Z`}
+        d={`M0.8,${size} L0.8,${size*0.44} Q0.8,0 ${size/2},0 Q${size-0.8},0 ${size-0.8},${size*0.44}
+            L${size-0.8},${size} L${size*0.83},${size*0.76} L${size*0.67},${size}
+            L${size*0.5},${size*0.76} L${size*0.33},${size} L${size*0.17},${size*0.76} Z`}
         fill={color}
       />
-      <ellipse cx={size * 0.32} cy={size * 0.38} rx="2.8" ry="3" fill="white" />
-      <ellipse cx={size * 0.68} cy={size * 0.38} rx="2.8" ry="3" fill="white" />
-      <circle cx={size * 0.38} cy={size * 0.43} r="1.3" fill="#111" />
-      <circle cx={size * 0.74} cy={size * 0.43} r="1.3" fill="#111" />
+      <ellipse cx={size*0.32} cy={size*0.38} rx="2.9" ry="3.1" fill="white" />
+      <ellipse cx={size*0.68} cy={size*0.38} rx="2.9" ry="3.1" fill="white" />
+      <circle cx={size*0.38} cy={size*0.44} r="1.4" fill="#111" />
+      <circle cx={size*0.74} cy={size*0.44} r="1.4" fill="#111" />
+      <circle cx={size*0.32} cy={size*0.3} r="0.7" fill="white" opacity="0.5" />
+      <circle cx={size*0.68} cy={size*0.3} r="0.7" fill="white" opacity="0.5" />
     </g>
   );
 }
@@ -149,76 +177,54 @@ function PacMan({ x, y, dir, mouth }) {
   const y1 = y - PAC_R * Math.sin(rad);
   const x2 = x + PAC_R * Math.cos(rad);
   const y2 = y + PAC_R * Math.sin(rad);
-  const eyeX = x;
-  const eyeY = y - PAC_R * 0.55;
+  const eyeX = x + PAC_R * 0.32;
+  const eyeY = y - PAC_R * 0.58;
 
   return (
     <g transform={`rotate(${rotate},${x},${y})`}>
-      <circle cx={x} cy={y} r={PAC_R + 3} fill="none" stroke="#FFD700" strokeWidth="1.5" opacity="0.25" />
+      <circle cx={x} cy={y} r={PAC_R + 6} fill="none" stroke="#FFD700" strokeWidth="1" opacity="0.1" />
+      <circle cx={x} cy={y} r={PAC_R + 3.5} fill="none" stroke="#FFD700" strokeWidth="1.5" opacity="0.18" />
+      <circle cx={x} cy={y} r={PAC_R + 1.5} fill="none" stroke="#FFD700" strokeWidth="2" opacity="0.28" />
+      <circle cx={x + 0.8} cy={y + 1} r={PAC_R} fill="#7a6000" opacity="0.35" />
       {angle < 3 ? (
-        <circle cx={x} cy={y} r={PAC_R} fill="#FFD700" />
+        <circle cx={x} cy={y} r={PAC_R} fill="url(#pacGrad)" />
       ) : (
-        <path d={`M${x},${y} L${x1},${y1} A${PAC_R},${PAC_R} 0 1,1 ${x2},${y2} Z`} fill="#FFD700" />
+        <path d={`M${x},${y} L${x1},${y1} A${PAC_R},${PAC_R} 0 1,1 ${x2},${y2} Z`} fill="url(#pacGrad)" />
       )}
-      <circle cx={eyeX} cy={eyeY} r="1.6" fill="#1a1a00" />
+      <ellipse
+        cx={x - PAC_R * 0.22} cy={y - PAC_R * 0.38}
+        rx={PAC_R * 0.28} ry={PAC_R * 0.17}
+        fill="white" opacity="0.38"
+        transform={`rotate(-25,${x - PAC_R * 0.22},${y - PAC_R * 0.38})`}
+      />
+      <circle cx={eyeX} cy={eyeY} r="2.2" fill="#1a1200" />
+      <circle cx={eyeX + 0.6} cy={eyeY - 0.4} r="0.75" fill="white" opacity="0.7" />
     </g>
   );
 }
 
-function GameComplete({ score, onRestart, theme }) {
-  const background = theme === "dark" ? "rgba(5,8,16,0.93)" : "rgba(240,246,252,0.93)";
-
+function GameComplete({ score, theme }) {
+  const background = theme === "dark" ? "rgba(5,8,16,0.92)" : "rgba(240,246,252,0.92)";
   return (
     <div
       style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        background,
-        borderRadius: 8,
-        zIndex: 10,
-        backdropFilter: "blur(3px)",
+        position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        background, borderRadius: 8, zIndex: 10, backdropFilter: "blur(4px)",
       }}
     >
-      <div
-        style={{
-          fontFamily: "'Press Start 2P'",
-          fontSize: "clamp(10px,2.5vw,18px)",
-          color: "#FFD700",
-          textShadow: "0 0 30px #FFD700aa",
-          marginBottom: 16,
-          letterSpacing: 2,
-          textAlign: "center",
-        }}
-      >
+      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(10px,2.5vw,18px)", color: "#FFD700", textShadow: "0 0 30px #FFD700aa", marginBottom: 14, letterSpacing: 2, textAlign: "center" }}>
         GAME COMPLETE
       </div>
-      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(8px,2vw,13px)", color: "#39d353", marginBottom: 8 }}>
-        100% EATEN
+      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(8px,2vw,12px)", color: "#39d353", marginBottom: 8 }}>
+        ALL GHOSTS EATEN!
       </div>
-      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(8px,2vw,12px)", color: "#00fff5", marginBottom: 24 }}>
-        FINAL SCORE: {String(score).padStart(6, "0")}
+      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(8px,2vw,11px)", color: "#00fff5", marginBottom: 20 }}>
+        SCORE: {String(score).padStart(6, "0")}
       </div>
-      <button
-        onClick={onRestart}
-        style={{
-          background: "#FFD700",
-          color: "#111",
-          border: "none",
-          fontFamily: "'Press Start 2P'",
-          fontSize: 9,
-          padding: "12px 24px",
-          cursor: "pointer",
-          borderRadius: 3,
-          letterSpacing: 1,
-          boxShadow: "0 0 20px #FFD70066",
-        }}
-      >
-        PLAY AGAIN
-      </button>
+      <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: "#FFD70099", letterSpacing: 3 }}>
+        RESTARTING...
+      </div>
     </div>
   );
 }
@@ -246,6 +252,7 @@ export default function HomePage() {
   const [remaining, setRemaining] = useState(COLS * ROWS);
   const [trail, setTrail] = useState([]);
   const [gameOver, setGameOver] = useState(false);
+  const [gameSpeed, setGameSpeed] = useState("normal");
   const [ghosts, setGhosts] = useState([
     { color: "#FF0000", lag: 0, x: cellCX(0), y: cellCY(0) },
     { color: "#FFB8FF", lag: 8, x: cellCX(0), y: cellCY(0) },
@@ -268,6 +275,8 @@ export default function HomePage() {
   const totalTargetsRef = useRef(0);
   const currentTargetRef = useRef(null);
   const pacDirRef = useRef("right");
+  const speedRef = useRef(SPEED_PRESETS.normal);
+  const animateRef = useRef(null);
 
   function pickNearestTarget(fromCol, fromRow) {
     const remaining = [...remainingCellsRef.current];
@@ -352,10 +361,21 @@ export default function HomePage() {
       segmentIndexRef.current = 0;
     } else if (remainingCellsRef.current.size === 0) {
       setGameOver(true);
+      return;
+    }
+
+    if (animateRef.current) {
+      frameRef.current = requestAnimationFrame(animateRef.current);
     }
   }
 
   useEffect(() => {
+    speedRef.current = SPEED_PRESETS[gameSpeed] ?? SPEED_PRESETS.normal;
+  }, [gameSpeed]);
+
+  useEffect(() => {
+    let restartTimeout = null;
+
     resetAnimation();
 
     function animate(timestamp) {
@@ -372,6 +392,10 @@ export default function HomePage() {
 
         if (!nextSegment) {
           setGameOver(true);
+          restartTimeout = setTimeout(() => {
+            cancelAnimationFrame(frameRef.current);
+            resetAnimation();
+          }, 2200);
           return;
         }
 
@@ -383,7 +407,7 @@ export default function HomePage() {
       const seg = segmentRef.current;
       let idx = segmentIndexRef.current;
       let progress = segmentProgressRef.current;
-      let totalDist = SPEED * deltaSeconds;
+      let totalDist = speedRef.current * deltaSeconds;
 
       while (totalDist > 0 && idx < seg.length - 1) {
         const A = seg[idx];
@@ -433,6 +457,8 @@ export default function HomePage() {
         eatenRef.current = { ...eatenRef.current, [currentCellKey]: true };
         remainingCellsRef.current.delete(currentCellKey);
         scoreRef.current += contribution.level + 1;
+        mouthRef.current = 40;
+        mouthDirectionRef.current = -1;
 
         setEaten({ ...eatenRef.current });
         setScore(scoreRef.current);
@@ -444,6 +470,10 @@ export default function HomePage() {
 
         if (!nextSegment) {
           setGameOver(true);
+          restartTimeout = setTimeout(() => {
+            cancelAnimationFrame(frameRef.current);
+            resetAnimation();
+          }, 2200);
           return;
         }
 
@@ -452,7 +482,7 @@ export default function HomePage() {
         segmentProgressRef.current = 0;
       }
 
-      mouthRef.current += mouthDirectionRef.current * deltaSeconds * 420;
+      mouthRef.current += mouthDirectionRef.current * deltaSeconds * 480;
 
       if (mouthRef.current <= 2) {
         mouthRef.current = 2;
@@ -495,9 +525,13 @@ export default function HomePage() {
       frameRef.current = requestAnimationFrame(animate);
     }
 
+    animateRef.current = animate;
     frameRef.current = requestAnimationFrame(animate);
 
-    return () => cancelAnimationFrame(frameRef.current);
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      if (restartTimeout) clearTimeout(restartTimeout);
+    };
   }, [contributions]);
 
   useEffect(() => {
@@ -698,6 +732,34 @@ export default function HomePage() {
               GENERATE
             </button>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: textColor, whiteSpace: "nowrap" }}>PAC SPEED:</span>
+            <div style={{ display: "flex", border: `1px solid ${borderColor}`, borderRadius: 3, overflow: "hidden" }}>
+              {[
+                { key: "slow", label: "0.5×" },
+                { key: "normal", label: "1×" },
+                { key: "fast", label: "2×" },
+                { key: "turbo", label: "4×" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { setGameSpeed(key); speedRef.current = SPEED_PRESETS[key]; }}
+                  style={{
+                    background: gameSpeed === key ? "#FFD700" : theme === "dark" ? "#0a0e14" : "#f6f8fa",
+                    border: "none",
+                    color: gameSpeed === key ? "#111" : textColor,
+                    fontFamily: "'Press Start 2P'",
+                    fontSize: 7,
+                    padding: "7px 12px",
+                    cursor: "pointer",
+                    transition: "all .15s",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 18 }}>
@@ -745,6 +807,13 @@ export default function HomePage() {
           </div>
           <div style={{ overflowX: "auto" }}>
             <svg width={SVG_W} height={SVG_H} style={{ display: "block", minWidth: SVG_W, overflow: "visible" }}>
+              <defs>
+                <radialGradient id="pacGrad" cx="40%" cy="35%" r="65%">
+                  <stop offset="0%" stopColor="#FFE55C" />
+                  <stop offset="100%" stopColor="#FFA500" />
+                </radialGradient>
+              </defs>
+
               {monthPositions.map(({ label, col }) => (
                 <text key={col} x={PAD_L + col * STEP} y={18} fill={textColor} fontSize={9} fontFamily="monospace">
                   {label}
@@ -761,67 +830,24 @@ export default function HomePage() {
                 Array.from({ length: ROWS }, (_, row) => {
                   const contribution = getContributionAt(contributions, col, row);
                   const isEaten = Boolean(eaten[cellKey(col, row)]);
+                  const cx = PAD_L + col * STEP + CELL / 2;
+                  const cy = PAD_T + row * STEP + CELL / 2;
 
                   return (
-                    <rect
-                      key={`${col}-${row}`}
-                      x={PAD_L + col * STEP}
-                      y={PAD_T + row * STEP}
-                      width={CELL}
-                      height={CELL}
-                      rx={2}
-                      fill={isEaten ? background : colors[contribution.level]}
-                      opacity={isEaten ? 0.1 : 0.95}
-                    />
-                  );
-                }),
-              )}
-
-              {Array.from({ length: COLS }, (_, col) =>
-                Array.from({ length: ROWS }, (_, row) => {
-                  if (eaten[cellKey(col, row)]) {
-                    return null;
-                  }
-
-                  const contribution = getContributionAt(contributions, col, row);
-
-                  if (contribution.level === 0) {
-                    return null;
-                  }
-
-                  const radius = contribution.level >= 3 ? 3.2 : contribution.level >= 2 ? 2.4 : 1.8;
-
-                  return (
-                    <circle
-                      key={`d-${col}-${row}`}
-                      cx={PAD_L + col * STEP + CELL / 2}
-                      cy={PAD_T + row * STEP + CELL / 2}
-                      r={radius}
-                      fill="#FFD700"
-                      opacity={0.65 + contribution.level * 0.08}
-                    />
-                  );
-                }),
-              )}
-
-              {Array.from({ length: COLS }, (_, col) =>
-                Array.from({ length: ROWS }, (_, row) => {
-                  const contribution = getContributionAt(contributions, col, row);
-
-                  if (contribution.level < 4 || eaten[cellKey(col, row)]) {
-                    return null;
-                  }
-
-                  return (
-                    <circle
-                      key={`pp-${col}-${row}`}
-                      cx={PAD_L + col * STEP + CELL / 2}
-                      cy={PAD_T + row * STEP + CELL / 2}
-                      r={4.5}
-                      fill="#FFD700"
-                    >
-                      <animate attributeName="opacity" values="1;0.2;1" dur="0.75s" repeatCount="indefinite" />
-                    </circle>
+                    <g key={`cell-${col}-${row}`}>
+                      <rect
+                        x={PAD_L + col * STEP}
+                        y={PAD_T + row * STEP}
+                        width={CELL}
+                        height={CELL}
+                        rx={2}
+                        fill={contribution.level === 0 ? colors[0] : isEaten ? background : colors[0]}
+                        opacity={contribution.level === 0 ? 0.9 : isEaten ? 0.15 : 0.35}
+                      />
+                      {contribution.level > 0 && !isEaten && (
+                        <SmallGhost cx={cx} cy={cy} level={contribution.level} />
+                      )}
+                    </g>
                   );
                 }),
               )}
@@ -841,7 +867,7 @@ export default function HomePage() {
             </svg>
           </div>
 
-          {gameOver ? <GameComplete score={score} onRestart={resetAnimation} theme={theme} /> : null}
+          {gameOver ? <GameComplete score={score} theme={theme} /> : null}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -891,6 +917,68 @@ export default function HomePage() {
               </pre>
             </div>
           ))}
+
+          {(() => {
+            const deployedUrl = typeof window !== "undefined" ? window.location.origin : "https://YOUR-DEPLOYED-URL";
+            const readmeCode = [
+              `<!-- Paste this in your GitHub README.md -->`,
+              ``,
+              `## 🕹️ Pac-Man eats my GitHub contributions`,
+              ``,
+              `[![PAC-CONTRIBUTIONS](${deployedUrl}/api/og/${username})](${deployedUrl})`,
+              ``,
+              `> **[🎮 Watch live →](${deployedUrl})**`,
+              ``,
+              `<!-- ─────────────────────────────────────────── -->`,
+              `<!-- STEP 1: Deploy this app to Vercel / Railway  -->`,
+              `<!--   https://vercel.com/new  →  import this repo -->`,
+              `<!-- STEP 2: Replace YOUR-DEPLOYED-URL above       -->`,
+              `<!-- STEP 3: GitHub README renders the image live  -->`,
+              `<!-- ─────────────────────────────────────────── -->`,
+              ``,
+              `<!-- OR: link badge only (works without deploy) -->`,
+              `[![🕹 PAC-CONTRIBUTIONS](https://img.shields.io/badge/🕹_PAC--MAN-Eat_My_Commits-FFD700?style=for-the-badge)](${deployedUrl})`,
+            ].join("\n");
+
+            return (
+              <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `2px solid #FFD70055`, borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 13px", background: cardBackground, borderBottom: `1px solid ${borderColor}`, fontSize: 11, color: textColor }}>
+                  <span style={{ color: "#FFD700", fontFamily: "'Press Start 2P'", fontSize: 8 }}>README EMBED</span>
+                  <button
+                    onClick={() => copy(readmeCode, "readme")}
+                    style={{
+                      background: copied === "readme" ? "#39d353" : "#FFD700",
+                      border: "none",
+                      color: "#111",
+                      fontFamily: "'Press Start 2P'",
+                      fontSize: 7,
+                      padding: "4px 10px",
+                      cursor: "pointer",
+                      borderRadius: 2,
+                      transition: "all .2s",
+                    }}
+                  >
+                    {copied === "readme" ? "COPIED!" : "COPY"}
+                  </button>
+                </div>
+                <div style={{ padding: "10px 13px 6px", background: theme === "dark" ? "#0a0e14" : "#f8f9ff", borderBottom: `1px solid ${borderColor}`, fontSize: 10, color: "#FFD700", fontFamily: "'Press Start 2P'" }}>
+                  HOW TO ADD TO GITHUB README
+                </div>
+                <div style={{ padding: "8px 13px", background: theme === "dark" ? "#070b12" : "#f0f4ff", fontSize: 10, color: textColor, lineHeight: 1.8 }}>
+                  {["1. Deploy this app → Vercel / Railway / any host", "2. Copy the markdown below", "3. Paste into your README.md", "4. GitHub renders it as a live animated image"].map((step, i) => (
+                    <div key={i} style={{ marginBottom: 3 }}>
+                      <span style={{ color: "#FFD700" }}>▸ </span>{step}
+                    </div>
+                  ))}
+                </div>
+                <pre style={{ padding: 13, overflowX: "auto", margin: 0 }}>
+                  <code style={{ fontFamily: "'Share Tech Mono'", fontSize: 11, color: "#7dd3fc", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                    {readmeCode}
+                  </code>
+                </pre>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
