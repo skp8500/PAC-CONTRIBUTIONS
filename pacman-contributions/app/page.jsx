@@ -121,6 +121,52 @@ function getTargetCells(contributions) {
   return targets;
 }
 
+function getTargetSequence(contributions) {
+  const sequence = [];
+
+  contributions.forEach((contribution, index) => {
+    if (!contribution || contribution.level <= 0) {
+      return;
+    }
+
+    sequence.push({
+      key: cellKey(Math.floor(index / ROWS), index % ROWS),
+      col: Math.floor(index / ROWS),
+      row: index % ROWS,
+      date: contribution.date,
+      level: contribution.level,
+    });
+  });
+
+  return sequence;
+}
+
+function getTraversalSequence() {
+  const sequence = [];
+
+  for (let col = 0; col < COLS; col += 1) {
+    if (col % 2 === 0) {
+      for (let row = 0; row < ROWS; row += 1) {
+        sequence.push({
+          key: cellKey(col, row),
+          col,
+          row,
+        });
+      }
+    } else {
+      for (let row = ROWS - 1; row >= 0; row -= 1) {
+        sequence.push({
+          key: cellKey(col, row),
+          col,
+          row,
+        });
+      }
+    }
+  }
+
+  return sequence;
+}
+
 function Ghost({ x, y, color }) {
   const size = 13;
 
@@ -264,52 +310,39 @@ export default function HomePage() {
   const remainingCellsRef = useRef(null);
   const historyRef = useRef([]);
   const totalTargetsRef = useRef(0);
+  const traversalSequenceRef = useRef([]);
+  const targetIndexRef = useRef(0);
 
-  function pickTarget(fromCol, fromRow) {
-    const remainingCells = remainingCellsRef.current;
-
-    if (!remainingCells || remainingCells.size === 0) {
+  function getNextTraversalCell() {
+    if (targetIndexRef.current >= traversalSequenceRef.current.length) {
       return null;
     }
 
-    let bestPath = null;
-    let bestLength = Infinity;
-    let bestPriority = -1;
+    return traversalSequenceRef.current[targetIndexRef.current];
+  }
 
-    for (const key of remainingCells) {
-      const [targetCol, targetRow] = key.split(",").map(Number);
+  function buildPathToNextCell(fromCol, fromRow) {
+    const nextCell = getNextTraversalCell();
 
-      if (targetCol === fromCol && targetRow === fromRow) {
-        continue;
-      }
-
-      const nodes = aStar(fromCol, fromRow, targetCol, targetRow);
-
-      if (nodes.length === 0) {
-        continue;
-      }
-
-      const contribution = getContributionAt(contributions, targetCol, targetRow);
-      const pathLength = nodes.length;
-      const priority = contribution.level;
-
-      if (
-        pathLength < bestLength ||
-        (pathLength === bestLength && priority > bestPriority) ||
-        (pathLength === bestLength &&
-          priority === bestPriority &&
-          (!bestPath ||
-            targetCol < bestPath[bestPath.length - 1].col ||
-            (targetCol === bestPath[bestPath.length - 1].col &&
-              targetRow < bestPath[bestPath.length - 1].row)))
-      ) {
-        bestPath = nodes;
-        bestLength = pathLength;
-        bestPriority = priority;
-      }
+    if (!nextCell) {
+      return null;
     }
 
-    return bestPath ? toPixelPath(bestPath) : null;
+    if (nextCell.col === fromCol && nextCell.row === fromRow) {
+      return [
+        {
+          x: cellCX(fromCol),
+          y: cellCY(fromRow),
+          col: fromCol,
+          row: fromRow,
+          dir: pacDir,
+        },
+      ];
+    }
+
+    const nodes = aStar(fromCol, fromRow, nextCell.col, nextCell.row);
+
+    return nodes.length > 0 ? toPixelPath(nodes) : null;
   }
 
   function resetAnimation() {
@@ -323,6 +356,8 @@ export default function HomePage() {
     segmentRef.current = [];
     segmentIndexRef.current = 0;
     historyRef.current = [];
+    traversalSequenceRef.current = getTraversalSequence();
+    targetIndexRef.current = 0;
     remainingCellsRef.current = getTargetCells(contributions);
     totalTargetsRef.current = remainingCellsRef.current.size;
 
@@ -335,12 +370,11 @@ export default function HomePage() {
     setPacDir("right");
     setGhosts((previous) => previous.map((ghost) => ({ ...ghost, x: cellCX(0), y: cellCY(0) })));
 
-    const startingCellKey = cellKey(0, 0);
     const startingContribution = getContributionAt(contributions, 0, 0);
 
-    if (startingContribution.level > 0 && remainingCellsRef.current.has(startingCellKey)) {
-      eatenRef.current = { [startingCellKey]: true };
-      remainingCellsRef.current.delete(startingCellKey);
+    if (startingContribution.level > 0 && remainingCellsRef.current.has(cellKey(0, 0))) {
+      eatenRef.current = { [cellKey(0, 0)]: true };
+      remainingCellsRef.current.delete(cellKey(0, 0));
       scoreRef.current = startingContribution.level + 1;
 
       setEaten({ ...eatenRef.current });
@@ -348,9 +382,11 @@ export default function HomePage() {
       setRemaining(remainingCellsRef.current.size);
     }
 
-    const firstSegment = pickTarget(0, 0);
+    targetIndexRef.current = 1;
 
-    if (firstSegment) {
+    const firstSegment = buildPathToNextCell(0, 0);
+
+    if (firstSegment && firstSegment.length > 0) {
       segmentRef.current = firstSegment;
       segmentIndexRef.current = 0;
     } else if (remainingCellsRef.current.size === 0) {
@@ -371,7 +407,7 @@ export default function HomePage() {
 
       if (segmentRef.current.length === 0 || segmentIndexRef.current >= segmentRef.current.length) {
         const { col, row } = pacCellRef.current;
-        const nextSegment = pickTarget(col, row);
+        const nextSegment = buildPathToNextCell(col, row);
 
         if (!nextSegment) {
           setGameOver(true);
@@ -428,7 +464,8 @@ export default function HomePage() {
       }
 
       if (segmentIndexRef.current >= currentSegment.length - 1) {
-        const nextSegment = pickTarget(currentPoint.col, currentPoint.row);
+        targetIndexRef.current += 1;
+        const nextSegment = buildPathToNextCell(currentPoint.col, currentPoint.row);
 
         if (!nextSegment) {
           setGameOver(true);
