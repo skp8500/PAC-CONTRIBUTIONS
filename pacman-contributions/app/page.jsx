@@ -33,6 +33,55 @@ const DIRS = [
   [0, 1, "down"],
   [0, -1, "up"],
 ];
+const PAC_PIXEL = 1.35;
+const EAT_EFFECT_DURATION = 380;
+const PACMAN_PATTERNS = {
+  open: [
+    "0000111110000",
+    "0011111111100",
+    "0111111111110",
+    "1111111111111",
+    "1111111100000",
+    "1111110000000",
+    "1111000000000",
+    "1111110000000",
+    "1111111100000",
+    "1111111111111",
+    "0111111111110",
+    "0011111111100",
+    "0000111110000",
+  ],
+  half: [
+    "0000111110000",
+    "0011111111100",
+    "0111111111110",
+    "1111111111111",
+    "1111111111111",
+    "1111111000000",
+    "1111110000000",
+    "1111111000000",
+    "1111111111111",
+    "1111111111111",
+    "0111111111110",
+    "0011111111100",
+    "0000111110000",
+  ],
+  closed: [
+    "0000111110000",
+    "0011111111100",
+    "0111111111110",
+    "1111111111111",
+    "1111111111111",
+    "1111111111111",
+    "1111111111111",
+    "1111111111111",
+    "1111111111111",
+    "1111111111111",
+    "0111111111110",
+    "0011111111100",
+    "0000111110000",
+  ],
+};
 
 function aStar(startCol, startRow, goalCol, goalRow) {
   const h = (c, r) => Math.abs(c - goalCol) + Math.abs(r - goalRow);
@@ -169,36 +218,53 @@ function Ghost({ x, y, color }) {
   );
 }
 
+function EatenGhostEffect({ x, y, progress }) {
+  const driftX = progress * 5;
+  const driftY = progress * -4;
+  const opacity = 1 - progress;
+
+  return (
+    <g transform={`translate(${x + driftX}, ${y + driftY})`} opacity={opacity}>
+      <ellipse cx="-2.8" cy="-1.3" rx="2.1" ry="2.4" fill="white" />
+      <ellipse cx="2.8" cy="-1.3" rx="2.1" ry="2.4" fill="white" />
+      <circle cx="-1.9" cy="-0.6" r="0.95" fill="#111" />
+      <circle cx="3.7" cy="-0.6" r="0.95" fill="#111" />
+      <text x="8" y="2" fill="#7dd3fc" fontSize="5" fontFamily="'Press Start 2P'">
+        200
+      </text>
+    </g>
+  );
+}
+
 function PacMan({ x, y, dir, mouth }) {
   const rotate = { right: 0, left: 180, down: 90, up: 270 }[dir] ?? 0;
-  const angle = Math.max(2, mouth);
-  const rad = (angle * Math.PI) / 180;
-  const x1 = x + PAC_R * Math.cos(rad);
-  const y1 = y - PAC_R * Math.sin(rad);
-  const x2 = x + PAC_R * Math.cos(rad);
-  const y2 = y + PAC_R * Math.sin(rad);
-  const eyeX = x + PAC_R * 0.32;
-  const eyeY = y - PAC_R * 0.58;
+  const frame = mouth > 26 ? "open" : mouth > 12 ? "half" : "closed";
+  const pattern = PACMAN_PATTERNS[frame];
+  const width = pattern[0].length;
+  const height = pattern.length;
+  const offsetX = x - (width * PAC_PIXEL) / 2;
+  const offsetY = y - (height * PAC_PIXEL) / 2;
 
   return (
     <g transform={`rotate(${rotate},${x},${y})`}>
-      <circle cx={x} cy={y} r={PAC_R + 6} fill="none" stroke="#FFD700" strokeWidth="1" opacity="0.1" />
-      <circle cx={x} cy={y} r={PAC_R + 3.5} fill="none" stroke="#FFD700" strokeWidth="1.5" opacity="0.18" />
-      <circle cx={x} cy={y} r={PAC_R + 1.5} fill="none" stroke="#FFD700" strokeWidth="2" opacity="0.28" />
-      <circle cx={x + 0.8} cy={y + 1} r={PAC_R} fill="#7a6000" opacity="0.35" />
-      {angle < 3 ? (
-        <circle cx={x} cy={y} r={PAC_R} fill="url(#pacGrad)" />
-      ) : (
-        <path d={`M${x},${y} L${x1},${y1} A${PAC_R},${PAC_R} 0 1,1 ${x2},${y2} Z`} fill="url(#pacGrad)" />
-      )}
-      <ellipse
-        cx={x - PAC_R * 0.22} cy={y - PAC_R * 0.38}
-        rx={PAC_R * 0.28} ry={PAC_R * 0.17}
-        fill="white" opacity="0.38"
-        transform={`rotate(-25,${x - PAC_R * 0.22},${y - PAC_R * 0.38})`}
-      />
-      <circle cx={eyeX} cy={eyeY} r="2.2" fill="#1a1200" />
-      <circle cx={eyeX + 0.6} cy={eyeY - 0.4} r="0.75" fill="white" opacity="0.7" />
+      <g shapeRendering="crispEdges">
+        {pattern.flatMap((row, rowIndex) =>
+          row.split("").map((cell, colIndex) =>
+            cell === "1" ? (
+              <rect
+                key={`${rowIndex}-${colIndex}`}
+                x={offsetX + colIndex * PAC_PIXEL}
+                y={offsetY + rowIndex * PAC_PIXEL}
+                width={PAC_PIXEL}
+                height={PAC_PIXEL}
+                fill="#ffea00"
+              />
+            ) : null,
+          ),
+        )}
+        <rect x={offsetX + PAC_PIXEL * 4.25} y={offsetY + PAC_PIXEL * 3.2} width={PAC_PIXEL * 1.5} height={PAC_PIXEL * 1.5} fill="#111" />
+        <rect x={offsetX + PAC_PIXEL * 4.7} y={offsetY + PAC_PIXEL * 3.55} width={PAC_PIXEL * 0.5} height={PAC_PIXEL * 0.5} fill="white" opacity="0.75" />
+      </g>
     </g>
   );
 }
@@ -227,6 +293,8 @@ export default function HomePage() {
   const [remaining, setRemaining] = useState(COLS * ROWS);
   const [trail, setTrail] = useState([]);
   const [gameSpeed, setGameSpeed] = useState("half");
+  const [eatEffects, setEatEffects] = useState([]);
+  const [origin, setOrigin] = useState("https://YOUR-DEPLOYED-URL");
 
   const eatenRef = useRef({});
   const scoreRef = useRef(0);
@@ -305,6 +373,7 @@ export default function HomePage() {
     setScore(0);
     setRemaining(totalTargetsRef.current);
     setTrail([]);
+    setEatEffects([]);
     setPacPos({ x: cellCX(0), y: cellCY(0) });
     setPacDir("right");
 
@@ -335,6 +404,10 @@ export default function HomePage() {
   useEffect(() => {
     speedRef.current = SPEED_PRESETS[gameSpeed] ?? SPEED_PRESETS.half;
   }, [gameSpeed]);
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     resetAnimation();
@@ -414,6 +487,15 @@ export default function HomePage() {
         setEaten({ ...eatenRef.current });
         setScore(scoreRef.current);
         setRemaining(remainingCellsRef.current.size);
+        setEatEffects((previous) => [
+          ...previous.filter((effect) => timestamp - effect.createdAt < EAT_EFFECT_DURATION),
+          {
+            id: `${currentCellKey}-${timestamp}`,
+            x: cellCX(seg[idx].col),
+            y: cellCY(seg[idx].row),
+            createdAt: timestamp,
+          },
+        ]);
       }
 
       if (idx >= seg.length - 1) {
@@ -429,13 +511,20 @@ export default function HomePage() {
         segmentProgressRef.current = 0;
       }
 
-      // Mouth: wide open when at/approaching target ghost, normal chomp cycle otherwise
+      // Mouth: open into a bigger V-shaped bite only right before Pac-Man reaches a ghost.
       const distToTarget = currentTargetRef.current
         ? Math.abs(seg[idx].col - currentTargetRef.current.col) + Math.abs(seg[idx].row - currentTargetRef.current.row)
         : 99;
+      const nextNode = seg[Math.min(idx + 1, seg.length - 1)];
+      const isApproachingTarget =
+        currentTargetRef.current &&
+        nextNode &&
+        nextNode.col === currentTargetRef.current.col &&
+        nextNode.row === currentTargetRef.current.row &&
+        progress > 0.45;
 
-      if (distToTarget === 0) {
-        mouthRef.current = 40;
+      if (distToTarget === 0 || isApproachingTarget) {
+        mouthRef.current = 42;
       } else {
         mouthRef.current += mouthDirectionRef.current * deltaSeconds * 480;
         if (mouthRef.current <= 5) { mouthRef.current = 5; mouthDirectionRef.current = 1; }
@@ -457,6 +546,9 @@ export default function HomePage() {
       }));
 
       setTrail(recentTrail);
+      setEatEffects((previous) =>
+        previous.filter((effect) => timestamp - effect.createdAt < EAT_EFFECT_DURATION),
+      );
       frameRef.current = requestAnimationFrame(animate);
     }
 
@@ -559,13 +651,6 @@ export default function HomePage() {
         paddingBottom: 60,
       }}
     >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 5px; background: #0a0e14; }
-        ::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 3px; }
-      `}</style>
-
       <div style={{ textAlign: "center", padding: "40px 20px 30px", borderBottom: `1px solid ${borderColor}` }}>
         <svg width="52" height="52" viewBox="0 0 52 52" style={{ marginBottom: 10, filter: "drop-shadow(0 0 14px #FFD70099)" }}>
           <path d="M26,26 L50,12 A24,24 0 1,0 50,40 Z" fill="#FFD700" />
@@ -739,13 +824,6 @@ export default function HomePage() {
           </div>
           <div style={{ overflowX: "auto" }}>
             <svg width={SVG_W} height={SVG_H} style={{ display: "block", minWidth: SVG_W, overflow: "visible" }}>
-              <defs>
-                <radialGradient id="pacGrad" cx="40%" cy="35%" r="65%">
-                  <stop offset="0%" stopColor="#FFE55C" />
-                  <stop offset="100%" stopColor="#FFA500" />
-                </radialGradient>
-              </defs>
-
               {monthPositions.map(({ label, col }) => (
                 <text key={col} x={PAD_L + col * STEP} y={18} fill={textColor} fontSize={9} fontFamily="monospace">
                   {label}
@@ -790,6 +868,15 @@ export default function HomePage() {
 
                 return <circle key={index} cx={point.x} cy={point.y} r={radius} fill="#FFD700" opacity={opacity} />;
               })}
+
+              {eatEffects.map((effect) => (
+                <EatenGhostEffect
+                  key={effect.id}
+                  x={effect.x}
+                  y={effect.y}
+                  progress={Math.min(1, (performance.now() - effect.createdAt) / EAT_EFFECT_DURATION)}
+                />
+              ))}
 
               <PacMan x={pacPos.x} y={pacPos.y} dir={pacDir} mouth={mouth} />
             </svg>
@@ -845,7 +932,7 @@ export default function HomePage() {
           ))}
 
           {(() => {
-            const deployedUrl = typeof window !== "undefined" ? window.location.origin : "https://YOUR-DEPLOYED-URL";
+            const deployedUrl = origin;
             const darkSrc = `${deployedUrl}/api/${username}?theme=dark`;
             const lightSrc = `${deployedUrl}/api/${username}?theme=light`;
             const readmeCode = [

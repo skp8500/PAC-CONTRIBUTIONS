@@ -1,7 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap");
+
 html,
 body {
   margin: 0;
   padding: 0;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -16,4 +22,14 @@ a {
 button,
 input {
   font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  background: #0a0e14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 3px;
 }
