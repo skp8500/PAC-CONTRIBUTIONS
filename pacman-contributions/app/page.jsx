@@ -126,7 +126,7 @@ const GHOST_COLORS = { 1: "#6edff6", 2: "#FFB8FF", 3: "#FFB852", 4: "#FF0000" };
 
 function SmallGhost({ cx, cy, level }) {
   const color = GHOST_COLORS[Math.min(Math.max(level, 1), 4)];
-  const s = 9;
+  const s = PAC_R * 2 - 1;
   const x = cx - s / 2;
   const y = cy - s / 2;
   return (
@@ -203,31 +203,6 @@ function PacMan({ x, y, dir, mouth }) {
   );
 }
 
-function GameComplete({ score, theme }) {
-  const background = theme === "dark" ? "rgba(5,8,16,0.92)" : "rgba(240,246,252,0.92)";
-  return (
-    <div
-      style={{
-        position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        background, borderRadius: 8, zIndex: 10, backdropFilter: "blur(4px)",
-      }}
-    >
-      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(10px,2.5vw,18px)", color: "#FFD700", textShadow: "0 0 30px #FFD700aa", marginBottom: 14, letterSpacing: 2, textAlign: "center" }}>
-        GAME COMPLETE
-      </div>
-      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(8px,2vw,12px)", color: "#39d353", marginBottom: 8 }}>
-        ALL GHOSTS EATEN!
-      </div>
-      <div style={{ fontFamily: "'Press Start 2P'", fontSize: "clamp(8px,2vw,11px)", color: "#00fff5", marginBottom: 20 }}>
-        SCORE: {String(score).padStart(6, "0")}
-      </div>
-      <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: "#FFD70099", letterSpacing: 3 }}>
-        RESTARTING...
-      </div>
-    </div>
-  );
-}
 
 export default function HomePage() {
   const [username, setUsername] = useState("skp8500");
@@ -251,14 +226,7 @@ export default function HomePage() {
   const [score, setScore] = useState(0);
   const [remaining, setRemaining] = useState(COLS * ROWS);
   const [trail, setTrail] = useState([]);
-  const [gameOver, setGameOver] = useState(false);
   const [gameSpeed, setGameSpeed] = useState("normal");
-  const [ghosts, setGhosts] = useState([
-    { color: "#FF0000", lag: 0, x: cellCX(0), y: cellCY(0) },
-    { color: "#FFB8FF", lag: 8, x: cellCX(0), y: cellCY(0) },
-    { color: "#00CFCF", lag: 16, x: cellCX(0), y: cellCY(0) },
-    { color: "#FFB852", lag: 24, x: cellCX(0), y: cellCY(0) },
-  ]);
 
   const eatenRef = useRef({});
   const scoreRef = useRef(0);
@@ -337,10 +305,8 @@ export default function HomePage() {
     setScore(0);
     setRemaining(totalTargetsRef.current);
     setTrail([]);
-    setGameOver(false);
     setPacPos({ x: cellCX(0), y: cellCY(0) });
     setPacDir("right");
-    setGhosts((previous) => previous.map((ghost) => ({ ...ghost, x: cellCX(0), y: cellCY(0) })));
 
     const startingContribution = getContributionAt(contributions, 0, 0);
 
@@ -359,9 +325,6 @@ export default function HomePage() {
     if (firstSegment && firstSegment.length > 0) {
       segmentRef.current = firstSegment;
       segmentIndexRef.current = 0;
-    } else if (remainingCellsRef.current.size === 0) {
-      setGameOver(true);
-      return;
     }
 
     if (animateRef.current) {
@@ -374,8 +337,6 @@ export default function HomePage() {
   }, [gameSpeed]);
 
   useEffect(() => {
-    let restartTimeout = null;
-
     resetAnimation();
 
     function animate(timestamp) {
@@ -391,11 +352,7 @@ export default function HomePage() {
         const nextSegment = buildPathToTarget(col, row);
 
         if (!nextSegment) {
-          setGameOver(true);
-          restartTimeout = setTimeout(() => {
-            cancelAnimationFrame(frameRef.current);
-            resetAnimation();
-          }, 2200);
+          resetAnimation();
           return;
         }
 
@@ -414,10 +371,7 @@ export default function HomePage() {
         const B = seg[idx + 1];
         const stepDist = Math.hypot(B.x - A.x, B.y - A.y);
 
-        if (stepDist === 0) {
-          idx += 1;
-          continue;
-        }
+        if (stepDist === 0) { idx += 1; continue; }
 
         const leftInStep = stepDist * (1 - progress);
 
@@ -457,9 +411,6 @@ export default function HomePage() {
         eatenRef.current = { ...eatenRef.current, [currentCellKey]: true };
         remainingCellsRef.current.delete(currentCellKey);
         scoreRef.current += contribution.level + 1;
-        mouthRef.current = 40;
-        mouthDirectionRef.current = -1;
-
         setEaten({ ...eatenRef.current });
         setScore(scoreRef.current);
         setRemaining(remainingCellsRef.current.size);
@@ -469,11 +420,7 @@ export default function HomePage() {
         const nextSegment = buildPathToTarget(seg[idx].col, seg[idx].row);
 
         if (!nextSegment) {
-          setGameOver(true);
-          restartTimeout = setTimeout(() => {
-            cancelAnimationFrame(frameRef.current);
-            resetAnimation();
-          }, 2200);
+          resetAnimation();
           return;
         }
 
@@ -482,16 +429,17 @@ export default function HomePage() {
         segmentProgressRef.current = 0;
       }
 
-      mouthRef.current += mouthDirectionRef.current * deltaSeconds * 480;
+      // Mouth: wide open when at/approaching target ghost, normal chomp cycle otherwise
+      const distToTarget = currentTargetRef.current
+        ? Math.abs(seg[idx].col - currentTargetRef.current.col) + Math.abs(seg[idx].row - currentTargetRef.current.row)
+        : 99;
 
-      if (mouthRef.current <= 2) {
-        mouthRef.current = 2;
-        mouthDirectionRef.current = 1;
-      }
-
-      if (mouthRef.current >= 40) {
+      if (distToTarget === 0) {
         mouthRef.current = 40;
-        mouthDirectionRef.current = -1;
+      } else {
+        mouthRef.current += mouthDirectionRef.current * deltaSeconds * 480;
+        if (mouthRef.current <= 5) { mouthRef.current = 5; mouthDirectionRef.current = 1; }
+        if (mouthRef.current >= 38) { mouthRef.current = 38; mouthDirectionRef.current = -1; }
       }
 
       setMouth(mouthRef.current);
@@ -500,10 +448,7 @@ export default function HomePage() {
       pacDirRef.current = currentDir;
 
       historyRef.current.push({ x: visualX, y: visualY, timestamp });
-
-      if (historyRef.current.length > 200) {
-        historyRef.current.shift();
-      }
+      if (historyRef.current.length > 200) historyRef.current.shift();
 
       const recentTrail = historyRef.current.slice(-14).map((point, index, collection) => ({
         x: point.x,
@@ -512,26 +457,13 @@ export default function HomePage() {
       }));
 
       setTrail(recentTrail);
-
-      setGhosts((previous) =>
-        previous.map((ghost) => {
-          const laggedIndex = Math.max(0, historyRef.current.length - 1 - ghost.lag);
-          const point = historyRef.current[laggedIndex] || historyRef.current[0];
-
-          return point ? { ...ghost, x: point.x, y: point.y } : ghost;
-        }),
-      );
-
       frameRef.current = requestAnimationFrame(animate);
     }
 
     animateRef.current = animate;
     frameRef.current = requestAnimationFrame(animate);
 
-    return () => {
-      cancelAnimationFrame(frameRef.current);
-      if (restartTimeout) clearTimeout(restartTimeout);
-    };
+    return () => cancelAnimationFrame(frameRef.current);
   }, [contributions]);
 
   useEffect(() => {
@@ -859,15 +791,9 @@ export default function HomePage() {
                 return <circle key={index} cx={point.x} cy={point.y} r={radius} fill="#FFD700" opacity={opacity} />;
               })}
 
-              {ghosts.map((ghost, index) => (
-                <Ghost key={index} x={ghost.x} y={ghost.y} color={ghost.color} />
-              ))}
-
               <PacMan x={pacPos.x} y={pacPos.y} dir={pacDir} mouth={mouth} />
             </svg>
           </div>
-
-          {gameOver ? <GameComplete score={score} theme={theme} /> : null}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -920,23 +846,23 @@ export default function HomePage() {
 
           {(() => {
             const deployedUrl = typeof window !== "undefined" ? window.location.origin : "https://YOUR-DEPLOYED-URL";
+            const darkSrc = `${deployedUrl}/api/${username}?theme=dark`;
+            const lightSrc = `${deployedUrl}/api/${username}?theme=light`;
             const readmeCode = [
-              `<!-- Paste this in your GitHub README.md -->`,
+              `<!-- 🌓 HTML (adaptive dark/light — paste in your README.md) -->`,
+              `<picture>`,
+              `  <source media="(prefers-color-scheme: dark)" srcset="${darkSrc}" />`,
+              `  <img alt="pacman contributions" src="${lightSrc}" />`,
+              `</picture>`,
               ``,
-              `## 🕹️ Pac-Man eats my GitHub contributions`,
+              `<!-- ──────────────────────────────────────────────── -->`,
+              `<!-- STEP 1: Deploy this repo → vercel.com/new       -->`,
+              `<!-- STEP 2: Replace the URL above with your domain  -->`,
+              `<!-- STEP 3: Paste into your GitHub README.md        -->`,
+              `<!-- GitHub auto-switches dark/light based on theme  -->`,
+              `<!-- ──────────────────────────────────────────────── -->`,
               ``,
-              `[![PAC-CONTRIBUTIONS](${deployedUrl}/api/og/${username})](${deployedUrl})`,
-              ``,
-              `> **[🎮 Watch live →](${deployedUrl})**`,
-              ``,
-              `<!-- ─────────────────────────────────────────── -->`,
-              `<!-- STEP 1: Deploy this app to Vercel / Railway  -->`,
-              `<!--   https://vercel.com/new  →  import this repo -->`,
-              `<!-- STEP 2: Replace YOUR-DEPLOYED-URL above       -->`,
-              `<!-- STEP 3: GitHub README renders the image live  -->`,
-              `<!-- ─────────────────────────────────────────── -->`,
-              ``,
-              `<!-- OR: link badge only (works without deploy) -->`,
+              `<!-- 🔗 Markdown (simple link, works without deploy) -->`,
               `[![🕹 PAC-CONTRIBUTIONS](https://img.shields.io/badge/🕹_PAC--MAN-Eat_My_Commits-FFD700?style=for-the-badge)](${deployedUrl})`,
             ].join("\n");
 
