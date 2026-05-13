@@ -641,6 +641,41 @@ export default function HomePage() {
     setTimeout(() => setCopied(""), 2000);
   }
 
+  const deployedUrl = origin;
+  const workflowYaml = [
+    "name: Generate Pac-Man",
+    "",
+    "on:",
+    "  schedule:",
+    '    - cron: "0 0 * * *"',
+    "",
+    "  workflow_dispatch:",
+    "",
+    "jobs:",
+    "  generate:",
+    "    permissions:",
+    "      contents: write",
+    "",
+    "    runs-on: ubuntu-latest",
+    "",
+    "    steps:",
+    "      - uses: actions/checkout@v4",
+    "",
+    "      - uses: skp8500/PAC-CONTRIBUTIONS@main",
+    "        with:",
+    "          github_token: ${{ secrets.GITHUB_TOKEN }}",
+  ].join("\n");
+  const darkReadmeHtml = `<img alt="Pac-Man contribution graph"\n     src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg?v=1" />`;
+  const adaptiveReadmeHtml = [
+    "<picture>",
+    '  <source media="(prefers-color-scheme: dark)"',
+    `          srcset="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg" />`,
+    "",
+    '  <img alt="Pac-Man contribution graph"',
+    `       src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-light.svg" />`,
+    "</picture>",
+  ].join("\n");
+
   return (
     <div
       style={{
@@ -884,6 +919,175 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `2px solid #FFD70055`, borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 13px", background: cardBackground, borderBottom: `1px solid ${borderColor}`, fontSize: 11, color: textColor }}>
+              <span style={{ color: "#FFD700", fontFamily: "'Press Start 2P'", fontSize: 8 }}>README EMBED</span>
+              <span style={{ fontSize: 10, color: textColor }}>Profile README setup guide</span>
+            </div>
+
+            <div style={{ padding: "16px 16px 6px", background: theme === "dark" ? "#070b12" : "#f8f9ff", color: textColor }}>
+              <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: "#FFD700", marginBottom: 12 }}>
+                Pac-Man GitHub Contribution Graph — Setup Guide
+              </div>
+              <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.7 }}>
+                Transform your GitHub contribution graph into an animated Pac-Man display for your profile README.
+              </p>
+              <div style={{ fontSize: 12, lineHeight: 1.8, marginBottom: 14 }}>
+                <div>Features</div>
+                <div>Animated Pac-Man contribution graph</div>
+                <div>Dark mode support</div>
+                <div>Light mode support</div>
+                <div>Automatic daily updates via GitHub Actions</div>
+                <div>Compatible with any GitHub profile README</div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 1 — CREATE YOUR GITHUB PROFILE REPOSITORY</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  <div>Your GitHub profile repository must follow this format:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>YOUR_USERNAME/YOUR_USERNAME</code></pre>
+                  <div>Example:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{username}/{username}</code></pre>
+                  <div>If the repository does not exist:</div>
+                  <div>1. Go to GitHub</div>
+                  <div>2. Create a new repository</div>
+                  <div>3. Set the repository name as your GitHub username</div>
+                  <div>4. Make the repository public</div>
+                  <div>5. Initialize it with a README</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 2 — CREATE THE WORKFLOW FILE</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 8 }}>
+                  <div>Inside your profile repository, create the following file:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>.github/workflows/pacman.yml</code></pre>
+                  <div>Add the following configuration:</div>
+                </div>
+                <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderBottom: `1px solid ${borderColor}`, background: cardBackground }}>
+                    <span style={{ fontSize: 11 }}>Workflow YAML</span>
+                    <button onClick={() => copy(workflowYaml, "workflow-yml")} style={{ background: copied === "workflow-yml" ? "#39d353" : "#FFD700", border: "none", color: "#111", fontFamily: "'Press Start 2P'", fontSize: 7, padding: "4px 10px", cursor: "pointer", borderRadius: 2 }}>
+                      {copied === "workflow-yml" ? "COPIED" : "COPY YAML"}
+                    </button>
+                  </div>
+                  <pre style={{ padding: 13, overflowX: "auto", margin: 0 }}><code style={{ fontFamily: "'Share Tech Mono'", fontSize: 11, color: "#7dd3fc", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{workflowYaml}</code></pre>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 3 — ENABLE WORKFLOW WRITE PERMISSIONS</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  <div>Navigate to:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Repository → Settings → Actions → General</code></pre>
+                  <div>Under Workflow permissions, enable:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Read and write permissions</code></pre>
+                  <div>Click Save.</div>
+                  <div>This permission is required for the workflow to generate and push SVG files to the output branch.</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 4 — RUN THE WORKFLOW</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  <div>1. Open the Actions tab</div>
+                  <div>2. Select Generate Pac-Man</div>
+                  <div>3. Click Run workflow</div>
+                  <div>The workflow typically completes within a minute.</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 5 — VERIFY THE OUTPUT BRANCH</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  <div>After the workflow completes successfully, a new branch named:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>output</code></pre>
+                  <div>will be created.</div>
+                  <div>The branch should contain:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>pacman-dark.svg{"\n"}pacman-light.svg</code></pre>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 6 — ADD PAC-MAN TO YOUR README</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 10 }}>Open your README.md file.</div>
+
+                <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderBottom: `1px solid ${borderColor}`, background: cardBackground }}>
+                    <span style={{ fontSize: 11 }}>Dark Mode Only HTML</span>
+                    <button onClick={() => copy(darkReadmeHtml, "html-dark")} style={{ background: copied === "html-dark" ? "#39d353" : "#FFD700", border: "none", color: "#111", fontFamily: "'Press Start 2P'", fontSize: 7, padding: "4px 10px", cursor: "pointer", borderRadius: 2 }}>
+                      {copied === "html-dark" ? "COPIED" : "COPY HTML"}
+                    </button>
+                  </div>
+                  <pre style={{ padding: 13, overflowX: "auto", margin: 0 }}><code style={{ fontFamily: "'Share Tech Mono'", fontSize: 11, color: "#7dd3fc", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{darkReadmeHtml}</code></pre>
+                </div>
+
+                <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderBottom: `1px solid ${borderColor}`, background: cardBackground }}>
+                    <span style={{ fontSize: 11 }}>Automatic Dark & Light Mode HTML</span>
+                    <button onClick={() => copy(adaptiveReadmeHtml, "html-adaptive")} style={{ background: copied === "html-adaptive" ? "#39d353" : "#FFD700", border: "none", color: "#111", fontFamily: "'Press Start 2P'", fontSize: 7, padding: "4px 10px", cursor: "pointer", borderRadius: 2 }}>
+                      {copied === "html-adaptive" ? "COPIED" : "COPY HTML"}
+                    </button>
+                  </div>
+                  <pre style={{ padding: 13, overflowX: "auto", margin: 0 }}><code style={{ fontFamily: "'Share Tech Mono'", fontSize: 11, color: "#7dd3fc", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{adaptiveReadmeHtml}</code></pre>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>EXAMPLE</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  <div>If your GitHub username is:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{username}</code></pre>
+                  <div>Use:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{darkReadmeHtml}</code></pre>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>AUTOMATIC UPDATES</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  <div>The workflow updates the graph daily using:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{'schedule:\n  - cron: "0 0 * * *"'}</code></pre>
+                  <div>This ensures your contribution graph remains up to date automatically.</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 6 }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>TROUBLESHOOTING</div>
+                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                  <div>404 Not Found</div>
+                  <div>Possible causes:</div>
+                  <div>The output branch has not been created yet</div>
+                  <div>The workflow failed</div>
+                  <div>Solutions:</div>
+                  <div>Run the workflow manually</div>
+                  <div>Ensure workflow permissions are enabled</div>
+                  <div>Verify that the output branch exists</div>
+                  <div style={{ marginTop: 8 }}>Workflow Permission Error</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Settings → Actions → General → Read and write permissions</code></pre>
+                  <div>Contribution Graph Not Updating</div>
+                  <div>GitHub may cache SVG files aggressively.</div>
+                  <div>To force a refresh, update the version parameter:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>?v=2</code></pre>
+                  <div>Example:</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{`<img src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg?v=2" />`}</code></pre>
+                  <div>Increase the version number whenever you want to refresh the cache.</div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 16, padding: 12, border: `1px solid ${borderColor}`, borderRadius: 4, background: theme === "dark" ? "#0a0e14" : "#fff" }}>
+                <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#FFD700", marginBottom: 8 }}>FINAL RESULT</div>
+                <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                  <div>Animated Pac-Man contribution graph</div>
+                  <div>Dark mode support</div>
+                  <div>Light mode support</div>
+                  <div>Automatic daily updates</div>
+                  <div>Fully automated GitHub profile animation</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {[
             { key: "url", label: "API ENDPOINT", code: apiUrl },
             {
@@ -930,68 +1134,19 @@ export default function HomePage() {
               </pre>
             </div>
           ))}
+        </div>
 
-          {(() => {
-            const deployedUrl = origin;
-            const darkSrc = `${deployedUrl}/api/${username}?theme=dark`;
-            const lightSrc = `${deployedUrl}/api/${username}?theme=light`;
-            const readmeCode = [
-              `<!-- 🌓 HTML (adaptive dark/light — paste in your README.md) -->`,
-              `<picture>`,
-              `  <source media="(prefers-color-scheme: dark)" srcset="${darkSrc}" />`,
-              `  <img alt="pacman contributions" src="${lightSrc}" />`,
-              `</picture>`,
-              ``,
-              `<!-- ──────────────────────────────────────────────── -->`,
-              `<!-- STEP 1: Deploy this repo → vercel.com/new       -->`,
-              `<!-- STEP 2: Replace the URL above with your domain  -->`,
-              `<!-- STEP 3: Paste into your GitHub README.md        -->`,
-              `<!-- GitHub auto-switches dark/light based on theme  -->`,
-              `<!-- ──────────────────────────────────────────────── -->`,
-              ``,
-              `<!-- 🔗 Markdown (simple link, works without deploy) -->`,
-              `[![🕹 PAC-CONTRIBUTIONS](https://img.shields.io/badge/🕹_PAC--MAN-Eat_My_Commits-FFD700?style=for-the-badge)](${deployedUrl})`,
-            ].join("\n");
-
-            return (
-              <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `2px solid #FFD70055`, borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 13px", background: cardBackground, borderBottom: `1px solid ${borderColor}`, fontSize: 11, color: textColor }}>
-                  <span style={{ color: "#FFD700", fontFamily: "'Press Start 2P'", fontSize: 8 }}>README EMBED</span>
-                  <button
-                    onClick={() => copy(readmeCode, "readme")}
-                    style={{
-                      background: copied === "readme" ? "#39d353" : "#FFD700",
-                      border: "none",
-                      color: "#111",
-                      fontFamily: "'Press Start 2P'",
-                      fontSize: 7,
-                      padding: "4px 10px",
-                      cursor: "pointer",
-                      borderRadius: 2,
-                      transition: "all .2s",
-                    }}
-                  >
-                    {copied === "readme" ? "COPIED!" : "COPY"}
-                  </button>
-                </div>
-                <div style={{ padding: "10px 13px 6px", background: theme === "dark" ? "#0a0e14" : "#f8f9ff", borderBottom: `1px solid ${borderColor}`, fontSize: 10, color: "#FFD700", fontFamily: "'Press Start 2P'" }}>
-                  HOW TO ADD TO GITHUB README
-                </div>
-                <div style={{ padding: "8px 13px", background: theme === "dark" ? "#070b12" : "#f0f4ff", fontSize: 10, color: textColor, lineHeight: 1.8 }}>
-                  {["1. Deploy this app → Vercel / Railway / any host", "2. Copy the markdown below", "3. Paste into your README.md", "4. GitHub renders it as a live animated image"].map((step, i) => (
-                    <div key={i} style={{ marginBottom: 3 }}>
-                      <span style={{ color: "#FFD700" }}>▸ </span>{step}
-                    </div>
-                  ))}
-                </div>
-                <pre style={{ padding: 13, overflowX: "auto", margin: 0 }}>
-                  <code style={{ fontFamily: "'Share Tech Mono'", fontSize: 11, color: "#7dd3fc", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                    {readmeCode}
-                  </code>
-                </pre>
-              </div>
-            );
-          })()}
+        <div style={{ textAlign: "center", marginTop: 32, color: textColor, fontSize: 11, letterSpacing: 2 }}>
+          BUILT BY{" "}
+          <a
+            href="https://github.com/skp8500"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#FFD700", textDecoration: "none" }}
+          >
+            skp8500
+          </a>{" "}
+          · OPEN SOURCE · MIT
         </div>
       </div>
     </div>
