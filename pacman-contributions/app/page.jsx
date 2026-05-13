@@ -101,6 +101,26 @@ function toPixelPath(nodes) {
   }));
 }
 
+function getContributionAt(contributions, col, row) {
+  return contributions[col * ROWS + row] || { date: "2000-01-01", count: 0, level: 0 };
+}
+
+function getTargetCells(contributions) {
+  const targets = new Set();
+
+  for (let col = 0; col < COLS; col += 1) {
+    for (let row = 0; row < ROWS; row += 1) {
+      const contribution = getContributionAt(contributions, col, row);
+
+      if (contribution.level > 0) {
+        targets.add(cellKey(col, row));
+      }
+    }
+  }
+
+  return targets;
+}
+
 function Ghost({ x, y, color }) {
   const size = 13;
 
@@ -243,6 +263,7 @@ export default function HomePage() {
   const segmentIndexRef = useRef(0);
   const remainingCellsRef = useRef(null);
   const historyRef = useRef([]);
+  const totalTargetsRef = useRef(0);
 
   function pickTarget(fromCol, fromRow) {
     const remainingCells = remainingCellsRef.current;
@@ -251,11 +272,11 @@ export default function HomePage() {
       return null;
     }
 
-    const keys = [...remainingCells];
-    const maxTries = Math.min(20, keys.length);
+    let bestPath = null;
+    let bestLength = Infinity;
+    let bestPriority = -1;
 
-    for (let index = 0; index < maxTries; index += 1) {
-      const key = keys[Math.floor(Math.random() * keys.length)];
+    for (const key of remainingCells) {
       const [targetCol, targetRow] = key.split(",").map(Number);
 
       if (targetCol === fromCol && targetRow === fromRow) {
@@ -264,43 +285,31 @@ export default function HomePage() {
 
       const nodes = aStar(fromCol, fromRow, targetCol, targetRow);
 
-      if (nodes.length > 0) {
-        return toPixelPath(nodes);
+      if (nodes.length === 0) {
+        continue;
+      }
+
+      const contribution = getContributionAt(contributions, targetCol, targetRow);
+      const pathLength = nodes.length;
+      const priority = contribution.level;
+
+      if (
+        pathLength < bestLength ||
+        (pathLength === bestLength && priority > bestPriority) ||
+        (pathLength === bestLength &&
+          priority === bestPriority &&
+          (!bestPath ||
+            targetCol < bestPath[bestPath.length - 1].col ||
+            (targetCol === bestPath[bestPath.length - 1].col &&
+              targetRow < bestPath[bestPath.length - 1].row)))
+      ) {
+        bestPath = nodes;
+        bestLength = pathLength;
+        bestPriority = priority;
       }
     }
 
-    const visited = new Set([cellKey(fromCol, fromRow)]);
-    const queue = [{ col: fromCol, row: fromRow, path: [] }];
-
-    while (queue.length > 0) {
-      const current = queue.shift();
-
-      for (const [dc, dr, dir] of DIRS) {
-        const nc = current.col + dc;
-        const nr = current.row + dr;
-
-        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) {
-          continue;
-        }
-
-        const nextKey = cellKey(nc, nr);
-
-        if (visited.has(nextKey)) {
-          continue;
-        }
-
-        visited.add(nextKey);
-        const nextPath = [...current.path, { col: nc, row: nr, dir }];
-
-        if (remainingCells.has(nextKey)) {
-          return toPixelPath(nextPath);
-        }
-
-        queue.push({ col: nc, row: nr, path: nextPath });
-      }
-    }
-
-    return null;
+    return bestPath ? toPixelPath(bestPath) : null;
   }
 
   function resetAnimation() {
@@ -314,26 +323,38 @@ export default function HomePage() {
     segmentRef.current = [];
     segmentIndexRef.current = 0;
     historyRef.current = [];
-    remainingCellsRef.current = new Set(
-      Array.from({ length: COLS }, (_, col) =>
-        Array.from({ length: ROWS }, (_, row) => cellKey(col, row)),
-      ).flat(),
-    );
+    remainingCellsRef.current = getTargetCells(contributions);
+    totalTargetsRef.current = remainingCellsRef.current.size;
 
     setEaten({});
     setScore(0);
-    setRemaining(COLS * ROWS);
+    setRemaining(totalTargetsRef.current);
     setTrail([]);
     setGameOver(false);
     setPacPos({ x: cellCX(0), y: cellCY(0) });
     setPacDir("right");
     setGhosts((previous) => previous.map((ghost) => ({ ...ghost, x: cellCX(0), y: cellCY(0) })));
 
+    const startingCellKey = cellKey(0, 0);
+    const startingContribution = getContributionAt(contributions, 0, 0);
+
+    if (startingContribution.level > 0 && remainingCellsRef.current.has(startingCellKey)) {
+      eatenRef.current = { [startingCellKey]: true };
+      remainingCellsRef.current.delete(startingCellKey);
+      scoreRef.current = startingContribution.level + 1;
+
+      setEaten({ ...eatenRef.current });
+      setScore(scoreRef.current);
+      setRemaining(remainingCellsRef.current.size);
+    }
+
     const firstSegment = pickTarget(0, 0);
 
     if (firstSegment) {
       segmentRef.current = firstSegment;
       segmentIndexRef.current = 0;
+    } else if (remainingCellsRef.current.size === 0) {
+      setGameOver(true);
     }
   }
 
@@ -394,13 +415,12 @@ export default function HomePage() {
       pacCellRef.current = { col: currentPoint.col, row: currentPoint.row };
 
       const currentCellKey = cellKey(currentPoint.col, currentPoint.row);
+      const contribution = getContributionAt(contributions, currentPoint.col, currentPoint.row);
 
-      if (!eatenRef.current[currentCellKey]) {
+      if (contribution.level > 0 && !eatenRef.current[currentCellKey]) {
         eatenRef.current = { ...eatenRef.current, [currentCellKey]: true };
         remainingCellsRef.current.delete(currentCellKey);
-
-        const contribution = contributions[currentPoint.col * ROWS + currentPoint.row];
-        scoreRef.current += (contribution?.level ?? 0) + 1;
+        scoreRef.current += contribution.level + 1;
 
         setEaten({ ...eatenRef.current });
         setScore(scoreRef.current);
@@ -512,9 +532,9 @@ export default function HomePage() {
   const borderColor = theme === "dark" ? "#21262d" : "#d0d7de";
   const appBackground = theme === "dark" ? "#050810" : "#f0f6fc";
   const cardBackground = theme === "dark" ? "#0d1117" : "#fff";
-  const totalCells = COLS * ROWS;
+  const totalCells = totalTargetsRef.current || getTargetCells(contributions).size;
   const eatenCount = Object.keys(eaten).length;
-  const percentage = Math.round((eatenCount / totalCells) * 100);
+  const percentage = totalCells > 0 ? Math.round((eatenCount / totalCells) * 100) : 100;
   const apiUrl = `/api/contributions/${username}`;
   const monthPositions = [];
 
@@ -725,7 +745,7 @@ export default function HomePage() {
 
               {Array.from({ length: COLS }, (_, col) =>
                 Array.from({ length: ROWS }, (_, row) => {
-                  const contribution = contributions[col * ROWS + row] || { level: 0 };
+                  const contribution = getContributionAt(contributions, col, row);
                   const isEaten = Boolean(eaten[cellKey(col, row)]);
 
                   return (
@@ -749,8 +769,13 @@ export default function HomePage() {
                     return null;
                   }
 
-                  const contribution = contributions[col * ROWS + row] || { level: 0 };
-                  const radius = contribution.level >= 3 ? 3.2 : contribution.level >= 2 ? 2.4 : contribution.level >= 1 ? 1.8 : 1.3;
+                  const contribution = getContributionAt(contributions, col, row);
+
+                  if (contribution.level === 0) {
+                    return null;
+                  }
+
+                  const radius = contribution.level >= 3 ? 3.2 : contribution.level >= 2 ? 2.4 : 1.8;
 
                   return (
                     <circle
@@ -767,7 +792,7 @@ export default function HomePage() {
 
               {Array.from({ length: COLS }, (_, col) =>
                 Array.from({ length: ROWS }, (_, row) => {
-                  const contribution = contributions[col * ROWS + row] || { level: 0 };
+                  const contribution = getContributionAt(contributions, col, row);
 
                   if (contribution.level < 4 || eaten[cellKey(col, row)]) {
                     return null;
