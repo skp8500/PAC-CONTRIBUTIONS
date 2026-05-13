@@ -1,0 +1,36 @@
+name: Generate Pac-Man SVG
+
+on:
+  schedule:
+    # Runs daily at 00:30 UTC
+    - cron: '30 0 * * *'
+  workflow_dispatch:    # allow manual trigger from GitHub UI
+  push:
+    branches: [main]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Pac-Man SVGs
+        uses: skp8500/PAC-CONTRIBUTIONS@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # github_username defaults to the repo owner automatically
+
+      - name: Commit SVGs to output branch
+        run: |
+          cd dist
+          git init
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pacman-dark.svg pacman-light.svg
+          git commit -m "chore: generate pac-man svgs [skip ci]"
+          git push --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            HEAD:output
