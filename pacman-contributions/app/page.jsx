@@ -325,6 +325,8 @@ export default function HomePage() {
     if (firstSegment && firstSegment.length > 0) {
       segmentRef.current = firstSegment;
       segmentIndexRef.current = 0;
+    }
+
     if (animateRef.current) {
       frameRef.current = requestAnimationFrame(animateRef.current);
     }
