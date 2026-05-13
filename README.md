@@ -45,7 +45,10 @@ vercel
 3. Click Deploy (auto-detects Vite, zero config needed)
 
 ---
+## ReadMe
+https://github.com/skp8500/PAC-CONTRIBUTIONS/blob/main/pacman-contributions/README.md
 
+---
 ## Embed in Your GitHub README
 
 After deploying, add to your profile `README.md`:
