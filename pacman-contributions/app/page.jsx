@@ -121,51 +121,6 @@ function getTargetCells(contributions) {
   return targets;
 }
 
-function getTargetSequence(contributions) {
-  const sequence = [];
-
-  contributions.forEach((contribution, index) => {
-    if (!contribution || contribution.level <= 0) {
-      return;
-    }
-
-    sequence.push({
-      key: cellKey(Math.floor(index / ROWS), index % ROWS),
-      col: Math.floor(index / ROWS),
-      row: index % ROWS,
-      date: contribution.date,
-      level: contribution.level,
-    });
-  });
-
-  return sequence;
-}
-
-function getTraversalSequence() {
-  const sequence = [];
-
-  for (let col = 0; col < COLS; col += 1) {
-    if (col % 2 === 0) {
-      for (let row = 0; row < ROWS; row += 1) {
-        sequence.push({
-          key: cellKey(col, row),
-          col,
-          row,
-        });
-      }
-    } else {
-      for (let row = ROWS - 1; row >= 0; row -= 1) {
-        sequence.push({
-          key: cellKey(col, row),
-          col,
-          row,
-        });
-      }
-    }
-  }
-
-  return sequence;
-}
 
 function Ghost({ x, y, color }) {
   const size = 13;
@@ -310,38 +265,27 @@ export default function HomePage() {
   const remainingCellsRef = useRef(null);
   const historyRef = useRef([]);
   const totalTargetsRef = useRef(0);
-  const traversalSequenceRef = useRef([]);
-  const targetIndexRef = useRef(0);
+  const currentTargetRef = useRef(null);
+  const pacDirRef = useRef("right");
 
-  function getNextTraversalCell() {
-    if (targetIndexRef.current >= traversalSequenceRef.current.length) {
-      return null;
-    }
-
-    return traversalSequenceRef.current[targetIndexRef.current];
+  function pickRandomTarget() {
+    const remaining = [...remainingCellsRef.current];
+    if (remaining.length === 0) return null;
+    const randomKey = remaining[Math.floor(Math.random() * remaining.length)];
+    const [col, row] = randomKey.split(",").map(Number);
+    return { col, row };
   }
 
-  function buildPathToNextCell(fromCol, fromRow) {
-    const nextCell = getNextTraversalCell();
+  function buildPathToTarget(fromCol, fromRow) {
+    const target = pickRandomTarget();
+    if (!target) return null;
+    currentTargetRef.current = target;
 
-    if (!nextCell) {
-      return null;
+    if (target.col === fromCol && target.row === fromRow) {
+      return [{ x: cellCX(fromCol), y: cellCY(fromRow), col: fromCol, row: fromRow, dir: pacDirRef.current }];
     }
 
-    if (nextCell.col === fromCol && nextCell.row === fromRow) {
-      return [
-        {
-          x: cellCX(fromCol),
-          y: cellCY(fromRow),
-          col: fromCol,
-          row: fromRow,
-          dir: pacDir,
-        },
-      ];
-    }
-
-    const nodes = aStar(fromCol, fromRow, nextCell.col, nextCell.row);
-
+    const nodes = aStar(fromCol, fromRow, target.col, target.row);
     return nodes.length > 0 ? toPixelPath(nodes) : null;
   }
 
@@ -356,10 +300,10 @@ export default function HomePage() {
     segmentRef.current = [];
     segmentIndexRef.current = 0;
     historyRef.current = [];
-    traversalSequenceRef.current = getTraversalSequence();
-    targetIndexRef.current = 0;
     remainingCellsRef.current = getTargetCells(contributions);
     totalTargetsRef.current = remainingCellsRef.current.size;
+    currentTargetRef.current = null;
+    pacDirRef.current = "right";
 
     setEaten({});
     setScore(0);
@@ -382,9 +326,7 @@ export default function HomePage() {
       setRemaining(remainingCellsRef.current.size);
     }
 
-    targetIndexRef.current = 1;
-
-    const firstSegment = buildPathToNextCell(0, 0);
+    const firstSegment = buildPathToTarget(0, 0);
 
     if (firstSegment && firstSegment.length > 0) {
       segmentRef.current = firstSegment;
@@ -407,7 +349,7 @@ export default function HomePage() {
 
       if (segmentRef.current.length === 0 || segmentIndexRef.current >= segmentRef.current.length) {
         const { col, row } = pacCellRef.current;
-        const nextSegment = buildPathToNextCell(col, row);
+        const nextSegment = buildPathToTarget(col, row);
 
         if (!nextSegment) {
           setGameOver(true);
@@ -464,8 +406,7 @@ export default function HomePage() {
       }
 
       if (segmentIndexRef.current >= currentSegment.length - 1) {
-        targetIndexRef.current += 1;
-        const nextSegment = buildPathToNextCell(currentPoint.col, currentPoint.row);
+        const nextSegment = buildPathToTarget(currentPoint.col, currentPoint.row);
 
         if (!nextSegment) {
           setGameOver(true);
@@ -491,6 +432,7 @@ export default function HomePage() {
       setMouth(mouthRef.current);
       setPacPos({ x: currentPoint.x, y: currentPoint.y });
       setPacDir(currentPoint.dir);
+      pacDirRef.current = currentPoint.dir;
 
       historyRef.current.push({ x: currentPoint.x, y: currentPoint.y, timestamp });
 
