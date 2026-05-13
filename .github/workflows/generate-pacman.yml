@@ -4,9 +4,11 @@ on:
   schedule:
     # Runs daily at 00:30 UTC
     - cron: '30 0 * * *'
-  workflow_dispatch:    # allow manual trigger from GitHub UI
+  workflow_dispatch:    # allow manual trigger from GitHub Actions tab
   push:
     branches: [main]
+    paths:
+      - 'scripts/generate-pacman-svg.js'
 
 jobs:
   generate:
@@ -17,11 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate Pac-Man SVGs
-        uses: skp8500/PAC-CONTRIBUTIONS@main
+      - uses: actions/setup-node@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # github_username defaults to the repo owner automatically
+          node-version: '20'
+
+      - name: Generate Pac-Man SVGs
+        run: node scripts/generate-pacman-svg.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: ${{ github.repository_owner }}
 
       - name: Commit SVGs to output branch
         run: |
