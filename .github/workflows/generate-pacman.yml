@@ -2,41 +2,87 @@ name: Generate Pac-Man SVG
 
 on:
   schedule:
-    # Runs daily at 00:30 UTC
-    - cron: '30 0 * * *'
-  workflow_dispatch:    # allow manual trigger from GitHub Actions tab
+    # Offset away from the top of the hour to reduce the chance of dropped scheduled runs.
+    - cron: '17 3 * * *'
+    - cron: '47 15 * * *'
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/generate-pacman.yml'
+      - 'action.yml'
       - 'scripts/generate-pacman-svg.js'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-pacman-svg
+  cancel-in-progress: true
 
 jobs:
   generate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
         with:
-          node-version: '20'
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          check-latest: true
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            pacman-contributions/package-lock.json
 
       - name: Generate Pac-Man SVGs
-        run: node scripts/generate-pacman-svg.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.repository_owner }}
+        run: node scripts/generate-pacman-svg.js
 
-      - name: Commit SVGs to output branch
+      - name: Publish SVGs to output branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd dist
-          git init
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pacman-dark.svg pacman-light.svg
-          git commit -m "chore: generate pac-man svgs [skip ci]"
-          git push --force \
-            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
-            HEAD:output
+          set -euo pipefail
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          publish_dir="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$publish_dir" >/dev/null 2>&1 || rm -rf "$publish_dir"
+          }
+          trap cleanup EXIT
+
+          git fetch origin output:refs/remotes/origin/output || true
+
+          if git show-ref --verify --quiet refs/remotes/origin/output; then
+            git worktree add --force "$publish_dir" refs/remotes/origin/output
+          else
+            git worktree add --detach "$publish_dir"
+            (
+              cd "$publish_dir"
+              git checkout --orphan output
+              find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+            )
+          fi
+
+          rsync -a --delete dist/ "$publish_dir"/
+          touch "$publish_dir/.nojekyll"
+
+          cd "$publish_dir"
+          git add pacman-dark.svg pacman-light.svg .nojekyll
+
+          if git diff --cached --quiet; then
+            echo "No SVG changes to publish"
+            exit 0
+          fi
+
+          git commit -m "Generate Pac-Man contribution graph"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" HEAD:output

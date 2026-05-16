@@ -20,9 +20,10 @@ runs:
   using: composite
 
   steps:
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v5
       with:
-        node-version: '20'
+        node-version: '22'
+        check-latest: true
 
     - name: Generate SVGs
       shell: bash
@@ -34,24 +35,40 @@ runs:
     - name: Push to output branch
       shell: bash
       run: |
+        set -euo pipefail
+
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-        git fetch origin
+        publish_dir="$(mktemp -d)"
+        cleanup() {
+          git worktree remove --force "$publish_dir" >/dev/null 2>&1 || rm -rf "$publish_dir"
+        }
+        trap cleanup EXIT
 
-        git switch output || git switch --orphan output
+        git fetch origin output:refs/remotes/origin/output || true
 
-        find . -mindepth 1 -maxdepth 1 \
-          ! -name '.git' \
-          ! -name 'dist' \
-          -exec rm -rf {} +
+        if git show-ref --verify --quiet refs/remotes/origin/output; then
+          git worktree add --force "$publish_dir" refs/remotes/origin/output
+        else
+          git worktree add --detach "$publish_dir"
+          (
+            cd "$publish_dir"
+            git checkout --orphan output
+            find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          )
+        fi
 
-        cp -r dist/* .
+        rsync -a --delete dist/ "$publish_dir"/
+        touch "$publish_dir/.nojekyll"
 
-        touch .nojekyll
+        cd "$publish_dir"
+        git add pacman-dark.svg pacman-light.svg .nojekyll
 
-        git add .
+        if git diff --cached --quiet; then
+          echo "No SVG changes to publish"
+          exit 0
+        fi
 
-        git commit -m "Generate Pac-Man contribution graph" || echo "No changes"
-
-        git push origin output --force
+        git commit -m "Generate Pac-Man contribution graph"
+        git push origin HEAD:output

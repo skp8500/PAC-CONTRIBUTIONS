@@ -647,19 +647,25 @@ export default function HomePage() {
     "",
     "on:",
     "  schedule:",
-    '    - cron: "0 0 * * *"',
+    '    - cron: "17 3 * * *"',
+    '    - cron: "47 15 * * *"',
     "",
     "  workflow_dispatch:",
     "",
+    "permissions:",
+    "  contents: write",
+    "",
+    "concurrency:",
+    "  group: generate-pacman-svg",
+    "  cancel-in-progress: true",
+    "",
     "jobs:",
     "  generate:",
-    "    permissions:",
-    "      contents: write",
-    "",
     "    runs-on: ubuntu-latest",
+    "    timeout-minutes: 15",
     "",
     "    steps:",
-    "      - uses: actions/checkout@v4",
+    "      - uses: actions/checkout@v5",
     "",
     "      - uses: skp8500/PAC-CONTRIBUTIONS@main",
     "        with:",
@@ -1003,9 +1009,9 @@ export default function HomePage() {
                   <div>After the workflow completes successfully, a new branch named:</div>
                   <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>output</code></pre>
                   <div>will be created.</div>
-                  <div>The branch should contain:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>pacman-dark.svg{"\n"}pacman-light.svg</code></pre>
-                </div>
+                   <div>The branch should contain:</div>
+                   <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{`pacman-dark.svg\npacman-light.svg`}</code></pre>
+                 </div>
               </div>
 
               <div style={{ marginBottom: 16 }}>
@@ -1047,8 +1053,8 @@ export default function HomePage() {
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>AUTOMATIC UPDATES</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                   <div>The workflow updates the graph daily using:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{'schedule:\n  - cron: "0 0 * * *"'}</code></pre>
-                  <div>This ensures your contribution graph remains up to date automatically.</div>
+                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{'schedule:\n  - cron: "17 3 * * *"\n  - cron: "47 15 * * *"'}</code></pre>
+                  <div>Using two off-peak schedules reduces the chance of delayed or dropped scheduled runs.</div>
                 </div>
               </div>
 
@@ -1059,10 +1065,12 @@ export default function HomePage() {
                   <div>Possible causes:</div>
                   <div>The output branch has not been created yet</div>
                   <div>The workflow failed</div>
+                  <div>GitHub automatically disabled scheduled workflows after 60 days with no repository activity</div>
                   <div>Solutions:</div>
                   <div>Run the workflow manually</div>
                   <div>Ensure workflow permissions are enabled</div>
                   <div>Verify that the output branch exists</div>
+                  <div>Re-enable the workflow from the Actions tab if GitHub disabled its schedule</div>
                   <div style={{ marginTop: 8 }}>Workflow Permission Error</div>
                   <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Settings → Actions → General → Read and write permissions</code></pre>
                   <div>Contribution Graph Not Updating</div>
