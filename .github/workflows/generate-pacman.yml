@@ -73,11 +73,11 @@ jobs:
             )
           fi
 
-          rsync -a --delete dist/ "$publish_dir"/
+          rsync -a --delete --exclude '.git' dist/ "$publish_dir"/
           touch "$publish_dir/.nojekyll"
 
           cd "$publish_dir"
-          git add pacman-dark.svg pacman-light.svg .nojekyll
+          git add -A
 
           if git diff --cached --quiet; then
             echo "No SVG changes to publish"
