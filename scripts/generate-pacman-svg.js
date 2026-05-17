@@ -81,6 +81,13 @@ const PACMAN_PATTERNS = {
 function cellCX(col) { return PAD_L + col * STEP + CELL / 2; }
 function cellCY(row) { return PAD_T + row * STEP + CELL / 2; }
 function f(n, d = 2)  { return Number(n).toFixed(d); }
+function getSegmentRotation(from, to) {
+  if (to.col > from.col) return 0;
+  if (to.col < from.col) return 180;
+  if (to.row > from.row) return 90;
+  if (to.row < from.row) return 270;
+  return 0;
+}
 
 // ── Render a pixel-art frame as SVG rects centred at (0,0) ───────────────────
 function renderPacFrame(pattern) {
@@ -200,6 +207,10 @@ function generateSVG(grid, weeks, traversal, isDark) {
   const motionD   = waypoints.map((w, i) => `${i === 0 ? 'M' : 'L'}${f(cellCX(w.col))},${f(cellCY(w.row))}`).join(' ');
   const keyPoints = waypoints.map((_, i) => f(i / n, 5)).join(';');
   const keyTimes  = waypoints.map(w  => f(w.time / totalTime, 5)).join(';');
+  const rotationValues = waypoints.map((waypoint, index) => {
+    const next = waypoints[index + 1] ?? waypoint;
+    return String(getSegmentRotation(waypoint, next));
+  }).join(';');
 
   // Month labels (y=18, matching page.jsx)
   let lastMonth = -1;
@@ -293,9 +304,10 @@ function generateSVG(grid, weeks, traversal, isDark) {
   @keyframes pf-open   { 0%{opacity:1} 33%{opacity:1} 34%{opacity:0} 100%{opacity:0} }
   @keyframes pf-half   { 0%{opacity:0} 33%{opacity:0} 34%{opacity:1} 67%{opacity:1} 68%{opacity:0} 100%{opacity:0} }
   @keyframes pf-closed { 0%{opacity:0} 67%{opacity:0} 68%{opacity:1} 100%{opacity:1} }
-  .pf0{animation:pf-open   0.25s linear infinite}
-  .pf1{animation:pf-half   0.25s linear infinite}
-  .pf2{animation:pf-closed 0.25s linear infinite}
+  .pf0,.pf1,.pf2{animation-duration:0.25s;animation-iteration-count:infinite;animation-timing-function:steps(1,end)}
+  .pf0{animation-name:pf-open}
+  .pf1{animation-name:pf-half}
+  .pf2{animation-name:pf-closed}
 </style>
 <rect width="${SVG_W}" height="${SVG_H}" fill="${bg}" rx="6"/>
 ${monthTags}
@@ -303,12 +315,15 @@ ${dayTags}
 ${cellParts.join('\n')}
 <path id="mp${suffix}" d="${motionD}" fill="none" stroke="none" visibility="hidden"/>
 <g>
-  <g class="pf0" shape-rendering="crispEdges">${frameOpen}</g>
-  <g class="pf1" shape-rendering="crispEdges">${frameHalf}</g>
-  <g class="pf2" shape-rendering="crispEdges">${frameClosed}</g>
-  <rect x="${eyeXc}" y="${eyeYc}" width="${eyeW}" height="${eyeW}" fill="#111"/>
-  <rect x="${glintXc}" y="${glintYc}" width="${glintS}" height="${glintS}" fill="white" opacity="0.75"/>
-  <animateMotion dur="${dur}s" repeatCount="indefinite" calcMode="linear" rotate="auto" keyPoints="${keyPoints}" keyTimes="${keyTimes}">
+  <g>
+    <g class="pf0" shape-rendering="crispEdges">${frameOpen}</g>
+    <g class="pf1" shape-rendering="crispEdges">${frameHalf}</g>
+    <g class="pf2" shape-rendering="crispEdges">${frameClosed}</g>
+    <rect x="${eyeXc}" y="${eyeYc}" width="${eyeW}" height="${eyeW}" fill="#111"/>
+    <rect x="${glintXc}" y="${glintYc}" width="${glintS}" height="${glintS}" fill="white" opacity="0.75"/>
+    <animateTransform attributeName="transform" type="rotate" additive="sum" calcMode="discrete" keyTimes="${keyTimes}" values="${rotationValues}" dur="${dur}s" repeatCount="indefinite"/>
+  </g>
+  <animateMotion dur="${dur}s" repeatCount="indefinite" calcMode="linear" keyPoints="${keyPoints}" keyTimes="${keyTimes}">
     <mpath href="#mp${suffix}"/>
   </animateMotion>
 </g>

@@ -1055,6 +1055,7 @@ export default function HomePage() {
                   <div>The workflow updates the graph daily using:</div>
                   <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{'schedule:\n  - cron: "17 3 * * *"\n  - cron: "47 15 * * *"'}</code></pre>
                   <div>Using two off-peak schedules reduces the chance of delayed or dropped scheduled runs.</div>
+                  <div>The output branch also gets a small heartbeat update on every run so GitHub is less likely to disable the schedule for inactivity.</div>
                 </div>
               </div>
 
