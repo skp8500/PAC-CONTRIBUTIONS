@@ -271,7 +271,7 @@ function PacMan({ x, y, dir, mouth }) {
 
 export default function HomePage() {
   const [username, setUsername] = useState("skp8500");
-  const [inputValue, setInputValue] = useState("skp8500");
+  const [inputValue, setInputValue] = useState("");
   const [copied, setCopied] = useState("");
   const [apiState, setApiState] = useState({
     source: "svg",
@@ -375,6 +375,10 @@ export default function HomePage() {
     setPacPos({ x: cellCX(0), y: cellCY(0) });
     setPacDir("right");
 
+    if (totalTargetsRef.current === 0) {
+      return;
+    }
+
     const startingContribution = getContributionAt(contributions, 0, 0);
 
     if (startingContribution.level > 0 && remainingCellsRef.current.has(cellKey(0, 0))) {
@@ -419,6 +423,10 @@ export default function HomePage() {
       lastTimestampRef.current = timestamp;
 
       if (segmentRef.current.length === 0) {
+        if (totalTargetsRef.current === 0) {
+          return;
+        }
+
         const { col, row } = pacCellRef.current;
         const nextSegment = buildPathToTarget(col, row);
 
@@ -602,10 +610,12 @@ export default function HomePage() {
   const borderColor = "#21262d";
   const appBackground = "#050810";
   const cardBackground = "#0d1117";
+  const hasUsername = Boolean(username);
+  const displayUsername = username || "your-username";
   const totalCells = totalTargetsRef.current || getTargetCells(contributions).size;
   const eatenCount = Object.keys(eaten).length;
   const percentage = totalCells > 0 ? Math.round((eatenCount / totalCells) * 100) : 100;
-  const apiUrl = `/api/contributions/${username}`;
+  const apiUrl = hasUsername ? `/api/contributions/${username}` : "/api/contributions/your-username";
   const monthPositions = [];
 
   let lastMonth = -1;
@@ -669,14 +679,14 @@ export default function HomePage() {
     "        with:",
     "          github_token: ${{ secrets.GITHUB_TOKEN }}",
   ].join("\n");
-  const darkReadmeHtml = `<img alt="Pac-Man contribution graph"\n     src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg?v=1" />`;
+  const darkReadmeHtml = `<img alt="Pac-Man contribution graph"\n     src="https://raw.githubusercontent.com/${displayUsername}/${displayUsername}/output/pacman-dark.svg?v=1" />`;
   const adaptiveReadmeHtml = [
     "<picture>",
     '  <source media="(prefers-color-scheme: dark)"',
-    `          srcset="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg" />`,
+    `          srcset="https://raw.githubusercontent.com/${displayUsername}/${displayUsername}/output/pacman-dark.svg" />`,
     "",
     '  <img alt="Pac-Man contribution graph"',
-    `       src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-light.svg" />`,
+    `       src="https://raw.githubusercontent.com/${displayUsername}/${displayUsername}/output/pacman-light.svg" />`,
     "</picture>",
   ].join("\n");
 
@@ -688,9 +698,16 @@ export default function HomePage() {
         minHeight: "100vh",
         color: "#c9d1d9",
         paddingBottom: 60,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <div style={{ textAlign: "center", padding: "40px 20px 30px", borderBottom: `1px solid ${borderColor}` }}>
+      <div className="cyber-bg-ambient" />
+      <div className="cyber-bg-grid" />
+      <div className="cyber-bg-noise" />
+      <div className="cyber-bg-vignette" />
+
+      <div style={{ position: "relative", zIndex: 1, textAlign: "center", padding: "40px 20px 30px", borderBottom: `1px solid ${borderColor}` }}>
         <svg width="52" height="52" viewBox="0 0 52 52" style={{ marginBottom: 10, filter: "drop-shadow(0 0 14px #FFD70099)" }}>
           <path d="M26,26 L50,12 A24,24 0 1,0 50,40 Z" fill="#FFD700" />
           <circle cx="17" cy="17" r="4" fill="#111" />
@@ -712,7 +729,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 16px 0" }}>
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto", padding: "28px 16px 0" }}>
         <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderTop: "2px solid #FFD700", borderRadius: 4, padding: 18, marginBottom: 18 }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "stretch" }}>
             <div style={{ flex: 1, minWidth: 180, display: "flex", alignItems: "center", background: "#0a0e14", border: `1px solid ${borderColor}`, borderRadius: 3, overflow: "hidden" }}>
@@ -800,14 +817,14 @@ export default function HomePage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 18 }}>
           {[
-            { label: "SOURCE", value: apiState.source.toUpperCase() },
+            { label: "SOURCE", value: hasUsername ? apiState.source.toUpperCase() : "--" },
             { label: "CACHE", value: apiState.cached ? "HIT" : "MISS" },
-            { label: "TOTAL", value: String(apiState.totalContributions) },
-            { label: "STATUS", value: isPending ? "LOADING" : errorMessage ? "ERROR" : "READY" },
+            { label: "TOTAL", value: hasUsername ? String(apiState.totalContributions) : "--" },
+            { label: "STATUS", value: isPending ? "LOADING" : errorMessage ? "ERROR" : hasUsername ? "READY" : "IDLE" },
           ].map((item) => (
             <div key={item.label} style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 4, padding: "12px 14px" }}>
               <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: textColor, marginBottom: 8 }}>{item.label}</div>
-              <div style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: item.label === "STATUS" && errorMessage ? "#ff7b72" : "#FFD700" }}>{item.value}</div>
+              <div style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: item.label === "STATUS" && errorMessage ? "#ff7b72" : item.value === "IDLE" ? textColor : "#FFD700" }}>{item.value}</div>
             </div>
           ))}
         </div>
@@ -827,7 +844,7 @@ export default function HomePage() {
           </div>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: textColor }}>{percentage}% EATEN</div>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: textColor }}>
-            {apiState.generatedAt ? new Date(apiState.generatedAt).toLocaleString() : "Waiting for data"}
+            {apiState.generatedAt ? new Date(apiState.generatedAt).toLocaleString() : hasUsername ? "Waiting for data" : "Enter a GitHub username"}
           </div>
         </div>
         <div style={{ height: 3, background: borderColor, borderRadius: 2, marginBottom: 12, overflow: "hidden" }}>
@@ -839,7 +856,7 @@ export default function HomePage() {
         </div>
         <div style={{ background, border: `1px solid ${borderColor}`, borderRadius: 8, padding: "14px 10px 10px", marginBottom: 24, overflow: "hidden", position: "relative" }}>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: textColor, marginBottom: 8, paddingLeft: 4 }}>
-            <span style={{ color: "#FFD700" }}>{username}</span>&apos;s GitHub Contributions
+            <span style={{ color: "#FFD700" }}>{displayUsername}</span>&apos;s GitHub Contributions
           </div>
           <div style={{ overflowX: "auto" }}>
             <svg width={SVG_W} height={SVG_H} style={{ display: "block", minWidth: SVG_W, overflow: "visible" }}>

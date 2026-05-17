@@ -12,6 +12,9 @@ body {
 
 body {
   min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(0, 255, 245, 0.06), transparent 30%),
+    linear-gradient(180deg, #07101b 0%, #050810 55%, #04070d 100%);
 }
 
 a {
@@ -32,4 +35,59 @@ input {
 ::-webkit-scrollbar-thumb {
   background: #ffd700;
   border-radius: 3px;
+}
+
+.cyber-bg-ambient,
+.cyber-bg-grid,
+.cyber-bg-noise,
+.cyber-bg-vignette {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.cyber-bg-ambient {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(0, 255, 245, 0.11), transparent 28%),
+    radial-gradient(circle at 78% 18%, rgba(255, 215, 0, 0.07), transparent 24%),
+    radial-gradient(circle at 52% 58%, rgba(125, 211, 252, 0.06), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(0, 0, 0, 0.08));
+  filter: blur(34px);
+  opacity: 0.95;
+  animation: ambientDrift 22s ease-in-out infinite alternate;
+}
+
+.cyber-bg-grid {
+  background-image:
+    linear-gradient(rgba(0, 255, 245, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 245, 0.09) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.16;
+  mask-image: radial-gradient(circle at center, black 48%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 48%, transparent 100%);
+  filter: drop-shadow(0 0 8px rgba(0, 255, 245, 0.08));
+}
+
+.cyber-bg-noise {
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.055) 0.7px, transparent 0.8px);
+  background-size: 18px 18px;
+  opacity: 0.055;
+  mix-blend-mode: screen;
+}
+
+.cyber-bg-vignette {
+  background:
+    radial-gradient(circle at center, transparent 44%, rgba(2, 4, 9, 0.24) 100%),
+    linear-gradient(180deg, rgba(3, 7, 13, 0.02), rgba(3, 7, 13, 0.28));
+}
+
+@keyframes ambientDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(0, -18px, 0) scale(1.04);
+  }
 }
