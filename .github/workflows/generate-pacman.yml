@@ -75,14 +75,12 @@ jobs:
 
           rsync -a --delete --exclude '.git' dist/ "$publish_dir"/
           touch "$publish_dir/.nojekyll"
+          printf '{\n  "generatedAt": "%s",\n  "sourceRun": "%s"\n}\n' \
+            "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            "${GITHUB_RUN_ID}" > "$publish_dir/.pacman-heartbeat.json"
 
           cd "$publish_dir"
           git add -A
-
-          if git diff --cached --quiet; then
-            echo "No SVG changes to publish"
-            exit 0
-          fi
 
           git commit -m "Generate Pac-Man contribution graph"
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" HEAD:output

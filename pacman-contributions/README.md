@@ -189,19 +189,25 @@ name: Generate Pac-Man
 
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "17 3 * * *"
+    - cron: "47 15 * * *"
 
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-pacman-svg
+  cancel-in-progress: true
+
 jobs:
   generate:
-    permissions:
-      contents: write
-
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: skp8500/PAC-CONTRIBUTIONS@main
         with:
@@ -213,6 +219,8 @@ Then enable:
 ```text
 Repository → Settings → Actions → General → Read and write permissions
 ```
+
+The action now writes a tiny heartbeat file to the `output` branch on every scheduled run, which helps keep the repository active so GitHub is less likely to disable the schedule for inactivity.
 
 ## Deployment
 
