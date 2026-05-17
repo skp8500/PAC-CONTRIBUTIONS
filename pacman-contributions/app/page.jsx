@@ -17,7 +17,6 @@ const SPEED_PRESETS = { quarter: 40, half: 80, threequarter: 120, full: 160 };
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DARK_COLORS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"];
-const LIGHT_COLORS = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"];
 const EMPTY_DATA = Array.from({ length: COLS * ROWS }, () => ({
   date: "2000-01-01",
   count: 0,
@@ -272,8 +271,7 @@ function PacMan({ x, y, dir, mouth }) {
 
 export default function HomePage() {
   const [username, setUsername] = useState("skp8500");
-  const [inputValue, setInputValue] = useState("skp8500");
-  const [theme, setTheme] = useState("dark");
+  const [inputValue, setInputValue] = useState("");
   const [copied, setCopied] = useState("");
   const [apiState, setApiState] = useState({
     source: "svg",
@@ -377,6 +375,10 @@ export default function HomePage() {
     setPacPos({ x: cellCX(0), y: cellCY(0) });
     setPacDir("right");
 
+    if (totalTargetsRef.current === 0) {
+      return;
+    }
+
     const startingContribution = getContributionAt(contributions, 0, 0);
 
     if (startingContribution.level > 0 && remainingCellsRef.current.has(cellKey(0, 0))) {
@@ -421,6 +423,10 @@ export default function HomePage() {
       lastTimestampRef.current = timestamp;
 
       if (segmentRef.current.length === 0) {
+        if (totalTargetsRef.current === 0) {
+          return;
+        }
+
         const { col, row } = pacCellRef.current;
         const nextSegment = buildPathToTarget(col, row);
 
@@ -598,16 +604,18 @@ export default function HomePage() {
     loadContributions();
   }, [username]);
 
-  const colors = theme === "dark" ? DARK_COLORS : LIGHT_COLORS;
-  const background = theme === "dark" ? "#0d1117" : "#f6f8fa";
-  const textColor = theme === "dark" ? "#8b949e" : "#57606a";
-  const borderColor = theme === "dark" ? "#21262d" : "#d0d7de";
-  const appBackground = theme === "dark" ? "#050810" : "#f0f6fc";
-  const cardBackground = theme === "dark" ? "#0d1117" : "#fff";
+  const colors = DARK_COLORS;
+  const background = "#0d1117";
+  const textColor = "#8b949e";
+  const borderColor = "#21262d";
+  const appBackground = "#050810";
+  const cardBackground = "#0d1117";
+  const hasUsername = Boolean(username);
+  const displayUsername = username || "your-username";
   const totalCells = totalTargetsRef.current || getTargetCells(contributions).size;
   const eatenCount = Object.keys(eaten).length;
   const percentage = totalCells > 0 ? Math.round((eatenCount / totalCells) * 100) : 100;
-  const apiUrl = `/api/contributions/${username}`;
+  const apiUrl = hasUsername ? `/api/contributions/${username}` : "/api/contributions/your-username";
   const monthPositions = [];
 
   let lastMonth = -1;
@@ -671,14 +679,14 @@ export default function HomePage() {
     "        with:",
     "          github_token: ${{ secrets.GITHUB_TOKEN }}",
   ].join("\n");
-  const darkReadmeHtml = `<img alt="Pac-Man contribution graph"\n     src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg?v=1" />`;
+  const darkReadmeHtml = `<img alt="Pac-Man contribution graph"\n     src="https://raw.githubusercontent.com/${displayUsername}/${displayUsername}/output/pacman-dark.svg?v=1" />`;
   const adaptiveReadmeHtml = [
     "<picture>",
     '  <source media="(prefers-color-scheme: dark)"',
-    `          srcset="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg" />`,
+    `          srcset="https://raw.githubusercontent.com/${displayUsername}/${displayUsername}/output/pacman-dark.svg" />`,
     "",
     '  <img alt="Pac-Man contribution graph"',
-    `       src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-light.svg" />`,
+    `       src="https://raw.githubusercontent.com/${displayUsername}/${displayUsername}/output/pacman-light.svg" />`,
     "</picture>",
   ].join("\n");
 
@@ -688,11 +696,18 @@ export default function HomePage() {
         fontFamily: "'Share Tech Mono', monospace",
         background: appBackground,
         minHeight: "100vh",
-        color: theme === "dark" ? "#c9d1d9" : "#24292f",
+        color: "#c9d1d9",
         paddingBottom: 60,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <div style={{ textAlign: "center", padding: "40px 20px 30px", borderBottom: `1px solid ${borderColor}` }}>
+      <div className="cyber-bg-ambient" />
+      <div className="cyber-bg-grid" />
+      <div className="cyber-bg-noise" />
+      <div className="cyber-bg-vignette" />
+
+      <div style={{ position: "relative", zIndex: 1, textAlign: "center", padding: "40px 20px 30px", borderBottom: `1px solid ${borderColor}` }}>
         <svg width="52" height="52" viewBox="0 0 52 52" style={{ marginBottom: 10, filter: "drop-shadow(0 0 14px #FFD70099)" }}>
           <path d="M26,26 L50,12 A24,24 0 1,0 50,40 Z" fill="#FFD700" />
           <circle cx="17" cy="17" r="4" fill="#111" />
@@ -714,10 +729,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 16px 0" }}>
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto", padding: "28px 16px 0" }}>
         <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderTop: "2px solid #FFD700", borderRadius: 4, padding: 18, marginBottom: 18 }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "stretch" }}>
-            <div style={{ flex: 1, minWidth: 180, display: "flex", alignItems: "center", background: theme === "dark" ? "#0a0e14" : "#f6f8fa", border: `1px solid ${borderColor}`, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ flex: 1, minWidth: 180, display: "flex", alignItems: "center", background: "#0a0e14", border: `1px solid ${borderColor}`, borderRadius: 3, overflow: "hidden" }}>
               <span
                 style={{
                   padding: "0 10px",
@@ -753,26 +768,6 @@ export default function HomePage() {
                 }}
               />
             </div>
-            <div style={{ display: "flex", border: `1px solid ${borderColor}`, borderRadius: 3, overflow: "hidden" }}>
-              {["dark", "light"].map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setTheme(mode)}
-                  style={{
-                    background: theme === mode ? "#FFD700" : "#0a0e14",
-                    border: "none",
-                    color: theme === mode ? "#111" : textColor,
-                    fontFamily: "'Press Start 2P'",
-                    fontSize: 7,
-                    padding: "0 12px",
-                    cursor: "pointer",
-                    transition: "all .15s",
-                  }}
-                >
-                  {mode === "dark" ? "DARK" : "LIGHT"}
-                </button>
-              ))}
-            </div>
             <button
               onClick={submitUsername}
               style={{
@@ -803,7 +798,7 @@ export default function HomePage() {
                   key={key}
                   onClick={() => { setGameSpeed(key); speedRef.current = SPEED_PRESETS[key]; }}
                   style={{
-                    background: gameSpeed === key ? "#FFD700" : theme === "dark" ? "#0a0e14" : "#f6f8fa",
+                    background: gameSpeed === key ? "#FFD700" : "#0a0e14",
                     border: "none",
                     color: gameSpeed === key ? "#111" : textColor,
                     fontFamily: "'Press Start 2P'",
@@ -822,14 +817,14 @@ export default function HomePage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 18 }}>
           {[
-            { label: "SOURCE", value: apiState.source.toUpperCase() },
+            { label: "SOURCE", value: hasUsername ? apiState.source.toUpperCase() : "--" },
             { label: "CACHE", value: apiState.cached ? "HIT" : "MISS" },
-            { label: "TOTAL", value: String(apiState.totalContributions) },
-            { label: "STATUS", value: isPending ? "LOADING" : errorMessage ? "ERROR" : "READY" },
+            { label: "TOTAL", value: hasUsername ? String(apiState.totalContributions) : "--" },
+            { label: "STATUS", value: isPending ? "LOADING" : errorMessage ? "ERROR" : hasUsername ? "READY" : "IDLE" },
           ].map((item) => (
             <div key={item.label} style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 4, padding: "12px 14px" }}>
               <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: textColor, marginBottom: 8 }}>{item.label}</div>
-              <div style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: item.label === "STATUS" && errorMessage ? "#ff7b72" : "#FFD700" }}>{item.value}</div>
+              <div style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: item.label === "STATUS" && errorMessage ? "#ff7b72" : item.value === "IDLE" ? textColor : "#FFD700" }}>{item.value}</div>
             </div>
           ))}
         </div>
@@ -849,7 +844,7 @@ export default function HomePage() {
           </div>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: textColor }}>{percentage}% EATEN</div>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: textColor }}>
-            {apiState.generatedAt ? new Date(apiState.generatedAt).toLocaleString() : "Waiting for data"}
+            {apiState.generatedAt ? new Date(apiState.generatedAt).toLocaleString() : hasUsername ? "Waiting for data" : "Enter a GitHub username"}
           </div>
         </div>
         <div style={{ height: 3, background: borderColor, borderRadius: 2, marginBottom: 12, overflow: "hidden" }}>
@@ -861,7 +856,7 @@ export default function HomePage() {
         </div>
         <div style={{ background, border: `1px solid ${borderColor}`, borderRadius: 8, padding: "14px 10px 10px", marginBottom: 24, overflow: "hidden", position: "relative" }}>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: textColor, marginBottom: 8, paddingLeft: 4 }}>
-            <span style={{ color: "#FFD700" }}>{username}</span>&apos;s GitHub Contributions
+            <span style={{ color: "#FFD700" }}>{displayUsername}</span>&apos;s GitHub Contributions
           </div>
           <div style={{ overflowX: "auto" }}>
             <svg width={SVG_W} height={SVG_H} style={{ display: "block", minWidth: SVG_W, overflow: "visible" }}>
@@ -925,13 +920,13 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `2px solid #FFD70055`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ background: "#0a0e14", border: `2px solid #FFD70055`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 13px", background: cardBackground, borderBottom: `1px solid ${borderColor}`, fontSize: 11, color: textColor }}>
               <span style={{ color: "#FFD700", fontFamily: "'Press Start 2P'", fontSize: 8 }}>README EMBED</span>
               <span style={{ fontSize: 10, color: textColor }}>Profile README setup guide</span>
             </div>
 
-            <div style={{ padding: "16px 16px 6px", background: theme === "dark" ? "#070b12" : "#f8f9ff", color: textColor }}>
+            <div style={{ padding: "16px 16px 6px", background: "#070b12", color: textColor }}>
               <div style={{ fontFamily: "'Press Start 2P'", fontSize: 8, color: "#FFD700", marginBottom: 12 }}>
                 Pac-Man GitHub Contribution Graph — Setup Guide
               </div>
@@ -951,9 +946,9 @@ export default function HomePage() {
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 1 — CREATE YOUR GITHUB PROFILE REPOSITORY</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                   <div>Your GitHub profile repository must follow this format:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>YOUR_USERNAME/YOUR_USERNAME</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>YOUR_USERNAME/YOUR_USERNAME</code></pre>
                   <div>Example:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{username}/{username}</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{username}/{username}</code></pre>
                   <div>If the repository does not exist:</div>
                   <div>1. Go to GitHub</div>
                   <div>2. Create a new repository</div>
@@ -967,10 +962,10 @@ export default function HomePage() {
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 2 — CREATE THE WORKFLOW FILE</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 8 }}>
                   <div>Inside your profile repository, create the following file:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>.github/workflows/pacman.yml</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>.github/workflows/pacman.yml</code></pre>
                   <div>Add the following configuration:</div>
                 </div>
-                <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ background: "#0a0e14", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderBottom: `1px solid ${borderColor}`, background: cardBackground }}>
                     <span style={{ fontSize: 11 }}>Workflow YAML</span>
                     <button onClick={() => copy(workflowYaml, "workflow-yml")} style={{ background: copied === "workflow-yml" ? "#39d353" : "#FFD700", border: "none", color: "#111", fontFamily: "'Press Start 2P'", fontSize: 7, padding: "4px 10px", cursor: "pointer", borderRadius: 2 }}>
@@ -985,9 +980,9 @@ export default function HomePage() {
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 3 — ENABLE WORKFLOW WRITE PERMISSIONS</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                   <div>Navigate to:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Repository → Settings → Actions → General</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Repository → Settings → Actions → General</code></pre>
                   <div>Under Workflow permissions, enable:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Read and write permissions</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Read and write permissions</code></pre>
                   <div>Click Save.</div>
                   <div>This permission is required for the workflow to generate and push SVG files to the output branch.</div>
                 </div>
@@ -1007,10 +1002,10 @@ export default function HomePage() {
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 5 — VERIFY THE OUTPUT BRANCH</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                   <div>After the workflow completes successfully, a new branch named:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>output</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>output</code></pre>
                   <div>will be created.</div>
                    <div>The branch should contain:</div>
-                   <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{`pacman-dark.svg\npacman-light.svg`}</code></pre>
+                   <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{`pacman-dark.svg\npacman-light.svg`}</code></pre>
                  </div>
               </div>
 
@@ -1018,7 +1013,7 @@ export default function HomePage() {
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>STEP 6 — ADD PAC-MAN TO YOUR README</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 10 }}>Open your README.md file.</div>
 
-                <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
+                <div style={{ background: "#0a0e14", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderBottom: `1px solid ${borderColor}`, background: cardBackground }}>
                     <span style={{ fontSize: 11 }}>Dark Mode Only HTML</span>
                     <button onClick={() => copy(darkReadmeHtml, "html-dark")} style={{ background: copied === "html-dark" ? "#39d353" : "#FFD700", border: "none", color: "#111", fontFamily: "'Press Start 2P'", fontSize: 7, padding: "4px 10px", cursor: "pointer", borderRadius: 2 }}>
@@ -1028,7 +1023,7 @@ export default function HomePage() {
                   <pre style={{ padding: 13, overflowX: "auto", margin: 0 }}><code style={{ fontFamily: "'Share Tech Mono'", fontSize: 11, color: "#7dd3fc", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{darkReadmeHtml}</code></pre>
                 </div>
 
-                <div style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ background: "#0a0e14", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderBottom: `1px solid ${borderColor}`, background: cardBackground }}>
                     <span style={{ fontSize: 11 }}>Automatic Dark & Light Mode HTML</span>
                     <button onClick={() => copy(adaptiveReadmeHtml, "html-adaptive")} style={{ background: copied === "html-adaptive" ? "#39d353" : "#FFD700", border: "none", color: "#111", fontFamily: "'Press Start 2P'", fontSize: 7, padding: "4px 10px", cursor: "pointer", borderRadius: 2 }}>
@@ -1037,15 +1032,16 @@ export default function HomePage() {
                   </div>
                   <pre style={{ padding: 13, overflowX: "auto", margin: 0 }}><code style={{ fontFamily: "'Share Tech Mono'", fontSize: 11, color: "#7dd3fc", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{adaptiveReadmeHtml}</code></pre>
                 </div>
+
               </div>
 
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>EXAMPLE</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                   <div>If your GitHub username is:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{username}</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{username}</code></pre>
                   <div>Use:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{darkReadmeHtml}</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{darkReadmeHtml}</code></pre>
                 </div>
               </div>
 
@@ -1053,7 +1049,7 @@ export default function HomePage() {
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#00fff5", marginBottom: 8 }}>AUTOMATIC UPDATES</div>
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                   <div>The workflow updates the graph daily using:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{'schedule:\n  - cron: "17 3 * * *"\n  - cron: "47 15 * * *"'}</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{'schedule:\n  - cron: "17 3 * * *"\n  - cron: "47 15 * * *"'}</code></pre>
                   <div>Using two off-peak schedules reduces the chance of delayed or dropped scheduled runs.</div>
                   <div>The output branch also gets a small heartbeat update on every run so GitHub is less likely to disable the schedule for inactivity.</div>
                 </div>
@@ -1073,18 +1069,18 @@ export default function HomePage() {
                   <div>Verify that the output branch exists</div>
                   <div>Re-enable the workflow from the Actions tab if GitHub disabled its schedule</div>
                   <div style={{ marginTop: 8 }}>Workflow Permission Error</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Settings → Actions → General → Read and write permissions</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>Settings → Actions → General → Read and write permissions</code></pre>
                   <div>Contribution Graph Not Updating</div>
                   <div>GitHub may cache SVG files aggressively.</div>
                   <div>To force a refresh, update the version parameter:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>?v=2</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>?v=2</code></pre>
                   <div>Example:</div>
-                  <pre style={{ margin: "8px 0", padding: 10, background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{`<img src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg?v=2" />`}</code></pre>
+                  <pre style={{ margin: "8px 0", padding: 10, background: "#0a0e14", border: `1px solid ${borderColor}`, overflowX: "auto" }}><code>{`<img src="https://raw.githubusercontent.com/${username}/${username}/output/pacman-dark.svg?v=2" />`}</code></pre>
                   <div>Increase the version number whenever you want to refresh the cache.</div>
                 </div>
               </div>
 
-              <div style={{ marginTop: 16, padding: 12, border: `1px solid ${borderColor}`, borderRadius: 4, background: theme === "dark" ? "#0a0e14" : "#fff" }}>
+              <div style={{ marginTop: 16, padding: 12, border: `1px solid ${borderColor}`, borderRadius: 4, background: "#0a0e14" }}>
                 <div style={{ fontFamily: "'Press Start 2P'", fontSize: 7, color: "#FFD700", marginBottom: 8 }}>FINAL RESULT</div>
                 <div style={{ fontSize: 12, lineHeight: 1.8 }}>
                   <div>Animated Pac-Man contribution graph</div>
@@ -1116,7 +1112,7 @@ export default function HomePage() {
               ),
             },
           ].map((snippet) => (
-            <div key={snippet.key} style={{ background: theme === "dark" ? "#0a0e14" : "#fff", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
+            <div key={snippet.key} style={{ background: "#0a0e14", border: `1px solid ${borderColor}`, borderRadius: 4, overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 13px", background: cardBackground, borderBottom: `1px solid ${borderColor}`, fontSize: 11, color: textColor }}>
                 <span>{snippet.label}</span>
                 <button
