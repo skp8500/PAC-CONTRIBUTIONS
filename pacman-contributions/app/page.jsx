@@ -311,6 +311,8 @@ export default function HomePage() {
   const pacDirRef = useRef("right");
   const speedRef = useRef(SPEED_PRESETS.half);
   const animateRef = useRef(null);
+  const cursorCoreRef = useRef(null);
+  const cursorTrailRefs = useRef([]);
 
   function pickNearestTarget(fromCol, fromRow) {
     const remaining = [...remainingCellsRef.current];
@@ -409,6 +411,83 @@ export default function HomePage() {
 
   useEffect(() => {
     setOrigin(window.location.origin);
+  }, []);
+
+  useEffect(() => {
+    let frame = null;
+    let latestX = 0;
+    let latestY = 0;
+    let visible = false;
+    const trailPoints = Array.from({ length: 5 }, () => ({ x: 0, y: 0 }));
+
+    const renderCursor = () => {
+      frame = null;
+
+      if (!visible) {
+        if (cursorCoreRef.current) {
+          cursorCoreRef.current.style.opacity = "0";
+        }
+        cursorTrailRefs.current.forEach((node) => {
+          if (node) {
+            node.style.opacity = "0";
+          }
+        });
+        return;
+      }
+
+      trailPoints[0] = { x: latestX, y: latestY };
+
+      for (let index = 1; index < trailPoints.length; index += 1) {
+        const previous = trailPoints[index - 1];
+        const current = trailPoints[index];
+        trailPoints[index] = {
+          x: current.x + (previous.x - current.x) * 0.32,
+          y: current.y + (previous.y - current.y) * 0.32,
+        };
+      }
+
+      if (cursorCoreRef.current) {
+        cursorCoreRef.current.style.opacity = "1";
+        cursorCoreRef.current.style.transform = `translate3d(${latestX}px, ${latestY}px, 0) translate(-50%, -50%)`;
+      }
+
+      cursorTrailRefs.current.forEach((node, index) => {
+        if (!node) {
+          return;
+        }
+
+        const point = trailPoints[index];
+        node.style.opacity = String(Math.max(0, 0.22 - index * 0.03));
+        node.style.transform = `translate3d(${point.x}px, ${point.y}px, 0) translate(-50%, -50%) scale(${1 - index * 0.08})`;
+      });
+
+      frame = requestAnimationFrame(renderCursor);
+    };
+
+    const updateCursor = (event) => {
+      latestX = event.clientX;
+      latestY = event.clientY;
+      visible = true;
+
+      if (!frame) {
+        frame = requestAnimationFrame(renderCursor);
+      }
+    };
+
+    const hideCursor = () => {
+      visible = false;
+    };
+
+    window.addEventListener("pointermove", updateCursor, { passive: true });
+    window.addEventListener("mouseleave", hideCursor);
+
+    return () => {
+      if (frame) {
+        cancelAnimationFrame(frame);
+      }
+      window.removeEventListener("pointermove", updateCursor);
+      window.removeEventListener("mouseleave", hideCursor);
+    };
   }, []);
 
   useEffect(() => {
@@ -706,6 +785,16 @@ export default function HomePage() {
       <div className="cyber-bg-grid" />
       <div className="cyber-bg-noise" />
       <div className="cyber-bg-vignette" />
+      {Array.from({ length: 5 }, (_, index) => (
+        <div
+          key={`cursor-trail-${index}`}
+          ref={(node) => {
+            cursorTrailRefs.current[index] = node;
+          }}
+          className="cursor-glow-trail"
+        />
+      ))}
+      <div ref={cursorCoreRef} className="cursor-glow-core" />
 
       <div style={{ position: "relative", zIndex: 1, textAlign: "center", padding: "40px 20px 30px", borderBottom: `1px solid ${borderColor}` }}>
         <svg width="52" height="52" viewBox="0 0 52 52" style={{ marginBottom: 10, filter: "drop-shadow(0 0 14px #FFD70099)" }}>

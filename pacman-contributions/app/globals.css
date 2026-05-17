@@ -82,6 +82,37 @@ input {
     linear-gradient(180deg, rgba(3, 7, 13, 0.02), rgba(3, 7, 13, 0.28));
 }
 
+.cursor-glow-core,
+.cursor-glow-trail {
+  pointer-events: none;
+  position: fixed;
+  z-index: 0;
+  border-radius: 999px;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.cursor-glow-core {
+  width: 142px;
+  height: 142px;
+  background:
+    radial-gradient(circle, rgba(0, 255, 245, 0.2) 0%, rgba(0, 255, 245, 0.09) 34%, rgba(0, 255, 245, 0.025) 58%, transparent 76%);
+  transform: translate(-50%, -50%);
+  filter: blur(12px);
+  mix-blend-mode: screen;
+}
+
+.cursor-glow-trail {
+  width: 96px;
+  height: 96px;
+  background:
+    radial-gradient(circle, rgba(255, 215, 0, 0.18) 0%, rgba(0, 255, 245, 0.1) 38%, transparent 76%);
+  filter: blur(13px);
+  mix-blend-mode: screen;
+}
+
 @keyframes ambientDrift {
   0% {
     transform: translate3d(0, 0, 0) scale(1);
